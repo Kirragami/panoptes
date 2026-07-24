@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "github.com/Kirragami/panoptes/proto";
+
+package panoptes;
+
+service PanoptesService {
+    rpc BindEye(BindRequest) returns (BindResponse);
+}
+
+message BindRequest {
+    string eye_id = 1;
+}
+
+message BindResponse {
+    bool success = 1;
+    string status_message = 2;
+}
