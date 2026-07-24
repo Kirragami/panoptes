@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"strings"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/Kirragami/panoptes/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type PanoptesServer struct {
@@ -43,6 +46,45 @@ func (s *PanoptesServer) BindEye(
 		Success:       true,
 		StatusMessage: "Bound successfully to the Panopticon",
 	}, nil
+}
+
+func (s *PanoptesServer) KeepVigil(
+	stream grpc.BidiStreamingServer[proto.EyePulse, proto.PanopticonSignal],
+) error {
+	for {
+		pulse, err := stream.Recv()
+		if err == io.EOF {
+			log.Printf("[PANOPTICON] An eye has closed")
+			return nil
+		}
+
+		if err != nil {
+			return fmt.Errorf("receive Eye pulse: %w", err)
+		}
+
+		eyeID := strings.TrimSpace(pulse.GetEyeId())
+		if eyeID == "" {
+			return status.Error(codes.InvalidArgument, "eye_id is required")
+		}
+
+		s.mu.Lock()
+		s.boundEyes[eyeID] = time.Now()
+		s.mu.Unlock()
+
+		log.Printf(
+			"[PANOPTICON] Vigil from Eye %s at %d",
+			eyeID,
+			pulse.GetSentAtUnix(),
+		)
+
+		signal := &proto.PanopticonSignal{
+			Message: "Panopticon sees you, Eye " + eyeID,
+		}
+
+		if err := stream.Send(signal); err != nil {
+			return fmt.Errorf("send Panopticon signal: %w", err)
+		}
+	}
 }
 
 func main() {

@@ -6,6 +6,7 @@ package panoptes;
 
 service PanoptesService {
     rpc BindEye(BindRequest) returns (BindResponse);
+    rpc KeepVigil(stream EyePulse) returns (stream PanopticonSignal);
 }
 
 message BindRequest {
@@ -15,4 +16,13 @@ message BindRequest {
 message BindResponse {
     bool success = 1;
     string status_message = 2;
+}
+
+message EyePulse {
+    string eye_id = 1;
+    int64 sent_at_unix = 2;
+}
+
+message PanopticonSignal {
+    string message = 1;
 }

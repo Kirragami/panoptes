@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v7.35.1
-// source: proto/mythos.proto
+// source: mythos.proto
 
 package proto
 
@@ -30,7 +30,7 @@ type BindRequest struct {
 
 func (x *BindRequest) Reset() {
 	*x = BindRequest{}
-	mi := &file_proto_mythos_proto_msgTypes[0]
+	mi := &file_mythos_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -42,7 +42,7 @@ func (x *BindRequest) String() string {
 func (*BindRequest) ProtoMessage() {}
 
 func (x *BindRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mythos_proto_msgTypes[0]
+	mi := &file_mythos_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -55,7 +55,7 @@ func (x *BindRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BindRequest.ProtoReflect.Descriptor instead.
 func (*BindRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mythos_proto_rawDescGZIP(), []int{0}
+	return file_mythos_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *BindRequest) GetEyeId() string {
@@ -75,7 +75,7 @@ type BindResponse struct {
 
 func (x *BindResponse) Reset() {
 	*x = BindResponse{}
-	mi := &file_proto_mythos_proto_msgTypes[1]
+	mi := &file_mythos_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -87,7 +87,7 @@ func (x *BindResponse) String() string {
 func (*BindResponse) ProtoMessage() {}
 
 func (x *BindResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mythos_proto_msgTypes[1]
+	mi := &file_mythos_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -100,7 +100,7 @@ func (x *BindResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BindResponse.ProtoReflect.Descriptor instead.
 func (*BindResponse) Descriptor() ([]byte, []int) {
-	return file_proto_mythos_proto_rawDescGZIP(), []int{1}
+	return file_mythos_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *BindResponse) GetSuccess() bool {
@@ -117,66 +117,173 @@ func (x *BindResponse) GetStatusMessage() string {
 	return ""
 }
 
-var File_proto_mythos_proto protoreflect.FileDescriptor
+type EyePulse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EyeId         string                 `protobuf:"bytes,1,opt,name=eye_id,json=eyeId,proto3" json:"eye_id,omitempty"`
+	SentAtUnix    int64                  `protobuf:"varint,2,opt,name=sent_at_unix,json=sentAtUnix,proto3" json:"sent_at_unix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
 
-const file_proto_mythos_proto_rawDesc = "" +
+func (x *EyePulse) Reset() {
+	*x = EyePulse{}
+	mi := &file_mythos_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EyePulse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EyePulse) ProtoMessage() {}
+
+func (x *EyePulse) ProtoReflect() protoreflect.Message {
+	mi := &file_mythos_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EyePulse.ProtoReflect.Descriptor instead.
+func (*EyePulse) Descriptor() ([]byte, []int) {
+	return file_mythos_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *EyePulse) GetEyeId() string {
+	if x != nil {
+		return x.EyeId
+	}
+	return ""
+}
+
+func (x *EyePulse) GetSentAtUnix() int64 {
+	if x != nil {
+		return x.SentAtUnix
+	}
+	return 0
+}
+
+type PanopticonSignal struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PanopticonSignal) Reset() {
+	*x = PanopticonSignal{}
+	mi := &file_mythos_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PanopticonSignal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PanopticonSignal) ProtoMessage() {}
+
+func (x *PanopticonSignal) ProtoReflect() protoreflect.Message {
+	mi := &file_mythos_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PanopticonSignal.ProtoReflect.Descriptor instead.
+func (*PanopticonSignal) Descriptor() ([]byte, []int) {
+	return file_mythos_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PanopticonSignal) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+var File_mythos_proto protoreflect.FileDescriptor
+
+const file_mythos_proto_rawDesc = "" +
 	"\n" +
-	"\x12proto/mythos.proto\x12\bpanoptes\"$\n" +
+	"\fmythos.proto\x12\bpanoptes\"$\n" +
 	"\vBindRequest\x12\x15\n" +
 	"\x06eye_id\x18\x01 \x01(\tR\x05eyeId\"O\n" +
 	"\fBindResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12%\n" +
-	"\x0estatus_message\x18\x02 \x01(\tR\rstatusMessage2K\n" +
+	"\x0estatus_message\x18\x02 \x01(\tR\rstatusMessage\"C\n" +
+	"\bEyePulse\x12\x15\n" +
+	"\x06eye_id\x18\x01 \x01(\tR\x05eyeId\x12 \n" +
+	"\fsent_at_unix\x18\x02 \x01(\x03R\n" +
+	"sentAtUnix\",\n" +
+	"\x10PanopticonSignal\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage2\x8c\x01\n" +
 	"\x0fPanoptesService\x128\n" +
-	"\aBindEye\x12\x15.panoptes.BindRequest\x1a\x16.panoptes.BindResponseB\tZ\a./protob\x06proto3"
+	"\aBindEye\x12\x15.panoptes.BindRequest\x1a\x16.panoptes.BindResponse\x12?\n" +
+	"\tKeepVigil\x12\x12.panoptes.EyePulse\x1a\x1a.panoptes.PanopticonSignal(\x010\x01B%Z#github.com/Kirragami/panoptes/protob\x06proto3"
 
 var (
-	file_proto_mythos_proto_rawDescOnce sync.Once
-	file_proto_mythos_proto_rawDescData []byte
+	file_mythos_proto_rawDescOnce sync.Once
+	file_mythos_proto_rawDescData []byte
 )
 
-func file_proto_mythos_proto_rawDescGZIP() []byte {
-	file_proto_mythos_proto_rawDescOnce.Do(func() {
-		file_proto_mythos_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_mythos_proto_rawDesc), len(file_proto_mythos_proto_rawDesc)))
+func file_mythos_proto_rawDescGZIP() []byte {
+	file_mythos_proto_rawDescOnce.Do(func() {
+		file_mythos_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_mythos_proto_rawDesc), len(file_mythos_proto_rawDesc)))
 	})
-	return file_proto_mythos_proto_rawDescData
+	return file_mythos_proto_rawDescData
 }
 
-var file_proto_mythos_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_proto_mythos_proto_goTypes = []any{
-	(*BindRequest)(nil),  // 0: panoptes.BindRequest
-	(*BindResponse)(nil), // 1: panoptes.BindResponse
+var file_mythos_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_mythos_proto_goTypes = []any{
+	(*BindRequest)(nil),      // 0: panoptes.BindRequest
+	(*BindResponse)(nil),     // 1: panoptes.BindResponse
+	(*EyePulse)(nil),         // 2: panoptes.EyePulse
+	(*PanopticonSignal)(nil), // 3: panoptes.PanopticonSignal
 }
-var file_proto_mythos_proto_depIdxs = []int32{
+var file_mythos_proto_depIdxs = []int32{
 	0, // 0: panoptes.PanoptesService.BindEye:input_type -> panoptes.BindRequest
-	1, // 1: panoptes.PanoptesService.BindEye:output_type -> panoptes.BindResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: panoptes.PanoptesService.KeepVigil:input_type -> panoptes.EyePulse
+	1, // 2: panoptes.PanoptesService.BindEye:output_type -> panoptes.BindResponse
+	3, // 3: panoptes.PanoptesService.KeepVigil:output_type -> panoptes.PanopticonSignal
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_proto_mythos_proto_init() }
-func file_proto_mythos_proto_init() {
-	if File_proto_mythos_proto != nil {
+func init() { file_mythos_proto_init() }
+func file_mythos_proto_init() {
+	if File_mythos_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_mythos_proto_rawDesc), len(file_proto_mythos_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mythos_proto_rawDesc), len(file_mythos_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_mythos_proto_goTypes,
-		DependencyIndexes: file_proto_mythos_proto_depIdxs,
-		MessageInfos:      file_proto_mythos_proto_msgTypes,
+		GoTypes:           file_mythos_proto_goTypes,
+		DependencyIndexes: file_mythos_proto_depIdxs,
+		MessageInfos:      file_mythos_proto_msgTypes,
 	}.Build()
-	File_proto_mythos_proto = out.File
-	file_proto_mythos_proto_goTypes = nil
-	file_proto_mythos_proto_depIdxs = nil
+	File_mythos_proto = out.File
+	file_mythos_proto_goTypes = nil
+	file_mythos_proto_depIdxs = nil
 }

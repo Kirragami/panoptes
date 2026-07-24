@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.2
 // - protoc             v7.35.1
-// source: proto/mythos.proto
+// source: mythos.proto
 
 package proto
 
@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PanoptesService_BindEye_FullMethodName = "/panoptes.PanoptesService/BindEye"
+	PanoptesService_BindEye_FullMethodName   = "/panoptes.PanoptesService/BindEye"
+	PanoptesService_KeepVigil_FullMethodName = "/panoptes.PanoptesService/KeepVigil"
 )
 
 // PanoptesServiceClient is the client API for PanoptesService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PanoptesServiceClient interface {
 	BindEye(ctx context.Context, in *BindRequest, opts ...grpc.CallOption) (*BindResponse, error)
+	KeepVigil(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[EyePulse, PanopticonSignal], error)
 }
 
 type panoptesServiceClient struct {
@@ -47,11 +49,25 @@ func (c *panoptesServiceClient) BindEye(ctx context.Context, in *BindRequest, op
 	return out, nil
 }
 
+func (c *panoptesServiceClient) KeepVigil(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[EyePulse, PanopticonSignal], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &PanoptesService_ServiceDesc.Streams[0], PanoptesService_KeepVigil_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[EyePulse, PanopticonSignal]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type PanoptesService_KeepVigilClient = grpc.BidiStreamingClient[EyePulse, PanopticonSignal]
+
 // PanoptesServiceServer is the server API for PanoptesService service.
 // All implementations must embed UnimplementedPanoptesServiceServer
 // for forward compatibility.
 type PanoptesServiceServer interface {
 	BindEye(context.Context, *BindRequest) (*BindResponse, error)
+	KeepVigil(grpc.BidiStreamingServer[EyePulse, PanopticonSignal]) error
 	mustEmbedUnimplementedPanoptesServiceServer()
 }
 
@@ -64,6 +80,9 @@ type UnimplementedPanoptesServiceServer struct{}
 
 func (UnimplementedPanoptesServiceServer) BindEye(context.Context, *BindRequest) (*BindResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BindEye not implemented")
+}
+func (UnimplementedPanoptesServiceServer) KeepVigil(grpc.BidiStreamingServer[EyePulse, PanopticonSignal]) error {
+	return status.Error(codes.Unimplemented, "method KeepVigil not implemented")
 }
 func (UnimplementedPanoptesServiceServer) mustEmbedUnimplementedPanoptesServiceServer() {}
 func (UnimplementedPanoptesServiceServer) testEmbeddedByValue()                         {}
@@ -104,6 +123,13 @@ func _PanoptesService_BindEye_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PanoptesService_KeepVigil_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(PanoptesServiceServer).KeepVigil(&grpc.GenericServerStream[EyePulse, PanopticonSignal]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type PanoptesService_KeepVigilServer = grpc.BidiStreamingServer[EyePulse, PanopticonSignal]
+
 // PanoptesService_ServiceDesc is the grpc.ServiceDesc for PanoptesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -116,6 +142,13 @@ var PanoptesService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _PanoptesService_BindEye_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/mythos.proto",
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "KeepVigil",
+			Handler:       _PanoptesService_KeepVigil_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
+	Metadata: "mythos.proto",
 }
