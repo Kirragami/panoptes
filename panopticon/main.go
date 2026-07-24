@@ -16,11 +16,58 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type EyeState struct {
+	LastSeen time.Time
+	Online   bool
+}
+
 type PanoptesServer struct {
 	proto.UnimplementedPanoptesServiceServer
 
-	mu        sync.Mutex
-	boundEyes map[string]time.Time
+	mu   sync.Mutex
+	eyes map[string]EyeState
+}
+
+func (s *PanoptesServer) recordSight(eyeID string) {
+	s.mu.Lock()
+	eye, known := s.eyes[eyeID]
+	wasOnline := eye.Online
+
+	eye.LastSeen = time.Now()
+	eye.Online = true
+	s.eyes[eyeID] = eye
+	s.mu.Unlock()
+
+	if !known {
+		log.Printf("[PANOPTICON] Eye first opened: %s", eyeID)
+		return
+	}
+
+	if !wasOnline {
+		log.Printf("[PANOPTICON] Eye open again: %s", eyeID)
+	}
+}
+
+func (s *PanoptesServer) watchForClosedEyes() {
+	const pulseTimeout = 45 * time.Second
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		cutoff := time.Now().Add(-pulseTimeout)
+
+		s.mu.Lock()
+		for eyeID, eye := range s.eyes {
+			if eye.Online && eye.LastSeen.Before(cutoff) {
+				eye.Online = false
+				s.eyes[eyeID] = eye
+
+				log.Printf("[PANOPTICON] Eye closed: %s", eyeID)
+			}
+		}
+		s.mu.Unlock()
+	}
 }
 
 func (s *PanoptesServer) BindEye(
@@ -36,9 +83,7 @@ func (s *PanoptesServer) BindEye(
 		}, nil
 	}
 
-	s.mu.Lock()
-	s.boundEyes[eyeID] = time.Now()
-	s.mu.Unlock()
+	s.recordSight(eyeID)
 
 	log.Printf("[PANOPTICON] Received binding request from Eye ID: %s", eyeID)
 
@@ -67,9 +112,7 @@ func (s *PanoptesServer) KeepVigil(
 			return status.Error(codes.InvalidArgument, "eye_id is required")
 		}
 
-		s.mu.Lock()
-		s.boundEyes[eyeID] = time.Now()
-		s.mu.Unlock()
+		s.recordSight(eyeID)
 
 		log.Printf(
 			"[PANOPTICON] Vigil from Eye %s at %d",
@@ -95,8 +138,10 @@ func main() {
 	}
 
 	panoptesServer := &PanoptesServer{
-		boundEyes: make(map[string]time.Time),
+		eyes: make(map[string]EyeState),
 	}
+
+	go panoptesServer.watchForClosedEyes()
 
 	grpcServer := grpc.NewServer()
 	proto.RegisterPanoptesServiceServer(grpcServer, panoptesServer)
