@@ -52,12 +52,52 @@ func keepVigil(
 		}
 
 		log.Printf("[EYE] %s", signal.GetMessage())
-	
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 
 		case <-pulseTicker.C:
+		}
+	}
+}
+
+func maintainVigil(iris Iris, eyeID string) {
+	retryDelay := time.Second
+	maxRetryDelay := 30 * time.Second
+
+	for {
+		bindContext, cancelBind := context.WithTimeout(
+			context.Background(),
+			5*time.Second,
+		)
+
+		err := bindEye(bindContext, iris.PanopticonEndpoint, eyeID)
+		cancelBind()
+
+		if err == nil {
+			log.Printf("Eye successfully bound to Panopticon: %s", eyeID)
+
+			retryDelay = time.Second
+
+			err = keepVigil(
+				context.Background(),
+				iris.PanopticonEndpoint,
+				eyeID,
+			)
+		}
+
+		log.Printf(
+			"Eye lost contact with Panopticon: %v; retrying in %s",
+			err,
+			retryDelay,
+		)
+
+		time.Sleep(retryDelay)
+
+		retryDelay *= 2
+		if retryDelay > maxRetryDelay {
+			retryDelay = maxRetryDelay
 		}
 	}
 }

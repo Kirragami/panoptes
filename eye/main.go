@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"log"
-	"time"
 )
 
 func main() {
@@ -23,20 +21,5 @@ func main() {
 		iris.PanopticonEndpoint,
 	)
 
-	bindContext, cancelBind := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelBind()
-
-	if err := bindEye(bindContext, iris.PanopticonEndpoint, eyeID); err != nil {
-		log.Fatalf("Eye could not Bind to Panopticon: %v", err)
-	}
-
-	log.Printf("Eye successfully bound to Panopticon: %s", eyeID)
-
-	if err := keepVigil(
-		context.Background(),
-		iris.PanopticonEndpoint,
-		eyeID,
-	); err != nil {
-		log.Fatalf("Eye lost its Vigil: %v", err)
-	}
+	maintainVigil(iris, eyeID)
 }
