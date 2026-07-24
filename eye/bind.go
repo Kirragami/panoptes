@@ -6,18 +6,16 @@ import (
 
 	"github.com/Kirragami/panoptes/proto"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func bindEye(
 	ctx context.Context,
-	panopticonEndpoint string,
+	iris Iris,
 	eyeID string,
 ) error {
 	connection, err := grpc.NewClient(
-		panopticonEndpoint,
-		// TODO: pwease change this to TLS comms later >_<
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		iris.PanopticonEndpoint,
+		grpc.WithTransportCredentials(openAegis(iris)),
 	)
 	if err != nil {
 		return fmt.Errorf("open connection to Panopticon: %w", err)

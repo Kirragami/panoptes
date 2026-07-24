@@ -141,9 +141,16 @@ func main() {
 		eyes: make(map[string]EyeState),
 	}
 
+	aegis, err := raiseAegis()
+	if err != nil {
+		log.Fatalf("Panopticon could not raise its Aegis: %v", err)
+	}
+
 	go panoptesServer.watchForClosedEyes()
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.Creds(aegis),
+	)
 	proto.RegisterPanoptesServiceServer(grpcServer, panoptesServer)
 
 	fmt.Printf("Panopticon is watching on port %s...\n", port)

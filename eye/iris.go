@@ -8,8 +8,9 @@ import (
 )
 
 type Iris struct {
-	PanopticonEndpoint string
-	StateDir           string
+	PanopticonEndpoint   string
+	PanopticonServerName string
+	StateDir             string
 }
 
 func openIris() (Iris, error) {
@@ -19,7 +20,8 @@ func openIris() (Iris, error) {
 		return Iris{}, fmt.Errorf("PANOPTICON_ENDPOINT is required")
 	}
 
-	if _, _, err := net.SplitHostPort(endpoint); err != nil {
+	serverName, _, err := net.SplitHostPort(endpoint)
+	if err != nil {
 		return Iris{}, fmt.Errorf(
 			"PANOPTICON_ENDPOINT must be host:port: %w",
 			err,
@@ -27,7 +29,8 @@ func openIris() (Iris, error) {
 	}
 
 	return Iris{
-		PanopticonEndpoint: endpoint,
-		StateDir:           "./state",
+		PanopticonEndpoint:   endpoint,
+		PanopticonServerName: serverName,
+		StateDir:             "./state",
 	}, nil
 }

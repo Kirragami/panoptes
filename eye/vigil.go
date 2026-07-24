@@ -8,17 +8,16 @@ import (
 
 	"github.com/Kirragami/panoptes/proto"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func keepVigil(
 	ctx context.Context,
-	panopticonEndpoint string,
+	iris Iris,
 	eyeID string,
 ) error {
 	connection, err := grpc.NewClient(
-		panopticonEndpoint,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		iris.PanopticonEndpoint,
+		grpc.WithTransportCredentials(openAegis(iris)),
 	)
 	if err != nil {
 		return fmt.Errorf("open Vigil connection to Panopticon: %w", err)
@@ -72,7 +71,7 @@ func maintainVigil(iris Iris, eyeID string) {
 			5*time.Second,
 		)
 
-		err := bindEye(bindContext, iris.PanopticonEndpoint, eyeID)
+		err := bindEye(bindContext, iris, eyeID)
 		cancelBind()
 
 		if err == nil {
@@ -82,7 +81,7 @@ func maintainVigil(iris Iris, eyeID string) {
 
 			err = keepVigil(
 				context.Background(),
-				iris.PanopticonEndpoint,
+				iris,
 				eyeID,
 			)
 		}
