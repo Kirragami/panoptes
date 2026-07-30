@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"time"
 
 	"github.com/Kirragami/panoptes/proto"
@@ -16,8 +17,11 @@ func keepVigil(
 	eyeID string,
 ) error {
 	connection, err := grpc.NewClient(
-		iris.PanopticonEndpoint,
+		"passthrough:///"+iris.PanopticonEndpoint,
 		grpc.WithTransportCredentials(openAegis(iris)),
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "tcp4", addr)
+		}),
 	)
 	if err != nil {
 		return fmt.Errorf("open Vigil connection to Panopticon: %w", err)

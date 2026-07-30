@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/Kirragami/panoptes/proto"
 	"google.golang.org/grpc"
@@ -14,8 +15,11 @@ func bindEye(
 	eyeID string,
 ) error {
 	connection, err := grpc.NewClient(
-		iris.PanopticonEndpoint,
+		"passthrough:///"+iris.PanopticonEndpoint,
 		grpc.WithTransportCredentials(openAegis(iris)),
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "tcp4", addr)
+		}),
 	)
 	if err != nil {
 		return fmt.Errorf("open connection to Panopticon: %w", err)
