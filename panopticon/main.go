@@ -24,13 +24,21 @@ type EyeState struct {
 type PanoptesServer struct {
 	proto.UnimplementedPanoptesServiceServer
 
-	mu   sync.Mutex
-	eyes map[string]EyeState
+	mu        sync.Mutex
+	eyes      map[string]EyeState
+	chronicle *Chronicle
 }
 
 func (s *PanoptesServer) recordSight(eyeID string) {
+	seenAt := time.Now().UTC()
+
+	sighting, isNew, err := s.chronicle.RecordSight(eyeID, seenAt)
+	if err != nil {
+		log.Printf("[PANOPTICON] Chronicle failed for Eye %s: %v", eyeID, err)
+	}
+
 	s.mu.Lock()
-	eye, known := s.eyes[eyeID]
+	eye, knownInMemory := s.eyes[eyeID]
 	wasOnline := eye.Online
 
 	eye.LastSeen = time.Now()
@@ -38,13 +46,17 @@ func (s *PanoptesServer) recordSight(eyeID string) {
 	s.eyes[eyeID] = eye
 	s.mu.Unlock()
 
-	if !known {
+	if isNew || !knownInMemory {
 		log.Printf("[PANOPTICON] Eye first opened: %s", eyeID)
 		return
 	}
 
 	if !wasOnline {
-		log.Printf("[PANOPTICON] Eye open again: %s", eyeID)
+		log.Printf(
+			"[PANOPTICON] Eye open again: %s (first seen %s)",
+			eyeID,
+			sighting.FirstSeen.Format(time.RFC3339),
+		)
 	}
 }
 
@@ -131,22 +143,44 @@ func (s *PanoptesServer) KeepVigil(
 }
 
 func main() {
-	port := ":50051"
-	lis, err := net.Listen("tcp", port)
+	chronicle, err := openChronicle("./panopticon.chronicle.db")
 	if err != nil {
-		log.Fatalf("Panopticon failed to wake up: %v", err)
+		log.Fatalf("Panopticon could not open its Chronicle: %v", err)
+	}
+	defer chronicle.Close()
+
+	sightings, err := chronicle.RecallSightings()
+	if err != nil {
+		log.Fatalf("Panopticon could not recall sightings: %v", err)
 	}
 
-	panoptesServer := &PanoptesServer{
-		eyes: make(map[string]EyeState),
+	eyes := make(map[string]EyeState, len(sightings))
+	for _, sighting := range sightings {
+		eyes[sighting.EyeID] = EyeState{
+			LastSeen: sighting.LastSeen,
+			Online:   false,
+		}
 	}
+
+	log.Printf("[PANOPTICON] Recalled %d Eyes from the Chronicle", len(sightings))
 
 	aegis, err := raiseAegis()
 	if err != nil {
 		log.Fatalf("Panopticon could not raise its Aegis: %v", err)
 	}
 
+	panoptesServer := &PanoptesServer{
+		eyes:      eyes,
+		chronicle: chronicle,
+	}
+
 	go panoptesServer.watchForClosedEyes()
+
+	port := ":50051"
+	lis, err := net.Listen("tcp", port)
+	if err != nil {
+		log.Fatalf("Panopticon failed to wake up: %v", err)
+	}
 
 	grpcServer := grpc.NewServer(
 		grpc.Creds(aegis),
