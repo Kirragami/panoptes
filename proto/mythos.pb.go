@@ -24,6 +24,7 @@ const (
 type BindRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EyeId         string                 `protobuf:"bytes,1,opt,name=eye_id,json=eyeId,proto3" json:"eye_id,omitempty"`
+	Seal          string                 `protobuf:"bytes,2,opt,name=seal,proto3" json:"seal,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -61,6 +62,13 @@ func (*BindRequest) Descriptor() ([]byte, []int) {
 func (x *BindRequest) GetEyeId() string {
 	if x != nil {
 		return x.EyeId
+	}
+	return ""
+}
+
+func (x *BindRequest) GetSeal() string {
+	if x != nil {
+		return x.Seal
 	}
 	return ""
 }
@@ -217,9 +225,10 @@ var File_mythos_proto protoreflect.FileDescriptor
 
 const file_mythos_proto_rawDesc = "" +
 	"\n" +
-	"\fmythos.proto\x12\bpanoptes\"$\n" +
+	"\fmythos.proto\x12\bpanoptes\"8\n" +
 	"\vBindRequest\x12\x15\n" +
-	"\x06eye_id\x18\x01 \x01(\tR\x05eyeId\"O\n" +
+	"\x06eye_id\x18\x01 \x01(\tR\x05eyeId\x12\x12\n" +
+	"\x04seal\x18\x02 \x01(\tR\x04seal\"O\n" +
 	"\fBindResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12%\n" +
 	"\x0estatus_message\x18\x02 \x01(\tR\rstatusMessage\"C\n" +

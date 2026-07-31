@@ -10,11 +10,13 @@ import (
 type Iris struct {
 	PanopticonEndpoint   string
 	PanopticonServerName string
+	Seal                 string
 	StateDir             string
 }
 
 func openIris() (Iris, error) {
 	endpoint := strings.TrimSpace(os.Getenv("PANOPTICON_ENDPOINT"))
+	seal := strings.TrimSpace(os.Getenv("PANOPTICON_SEAL"))
 
 	if endpoint == "" {
 		return Iris{}, fmt.Errorf("PANOPTICON_ENDPOINT is required")
@@ -31,6 +33,7 @@ func openIris() (Iris, error) {
 	return Iris{
 		PanopticonEndpoint:   endpoint,
 		PanopticonServerName: serverName,
+		Seal:                 seal,
 		StateDir:             "./state",
 	}, nil
 }

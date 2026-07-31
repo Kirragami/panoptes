@@ -30,6 +30,7 @@ func bindEye(
 
 	response, err := panopticon.BindEye(ctx, &proto.BindRequest{
 		EyeId: eyeID,
+		Seal:  iris.Seal,
 	})
 	if err != nil {
 		return fmt.Errorf("bind Eye to Panopticon: %w", err)

@@ -11,6 +11,7 @@ service PanoptesService {
 
 message BindRequest {
     string eye_id = 1;
+    string seal = 2;
 }
 
 message BindResponse {

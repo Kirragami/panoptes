@@ -41,6 +41,20 @@ func openChronicle(path string) (*Chronicle, error) {
 		return nil, fmt.Errorf("prepare Chronicle sightings: %w", err)
 	}
 
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS seals (
+			seal TEXT PRIMARY KEY,
+			created_at_unix INTEGER NOT NULL,
+			expires_at_unix INTEGER NOT NULL,
+			consumed_at_unix INTEGER,
+			bound_eye_id TEXT
+		);
+	`)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("prepare Chronicle seals: %w", err)
+	}
+
 	return &Chronicle{db: db}, nil
 }
 
@@ -137,4 +151,47 @@ func (c *Chronicle) RecallSightings() ([]Sighting, error) {
 	}
 
 	return sightings, nil
+}
+
+func (c *Chronicle) InscribeSeal(seal string, createdAt, expiresAt time.Time) error {
+	_, err := c.db.Exec(
+		`INSERT INTO seals (seal, created_at_unix, expires_at_unix)
+		 VALUES (?, ?, ?)`,
+		seal,
+		createdAt.Unix(),
+		expiresAt.Unix(),
+	)
+	if err != nil {
+		return fmt.Errorf("inscribe Seal: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Chronicle) ConsumeSeal(seal, eyeID string, consumedAt time.Time) error {
+	result, err := c.db.Exec(
+		`UPDATE seals
+		 SET consumed_at_unix = ?, bound_eye_id = ?
+		 WHERE seal = ?
+		   AND consumed_at_unix IS NULL
+		   AND expires_at_unix >= ?`,
+		consumedAt.Unix(),
+		eyeID,
+		seal,
+		consumedAt.Unix(),
+	)
+	if err != nil {
+		return fmt.Errorf("consume Seal: %w", err)
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("seal consumption result: %w", err)
+	}
+
+	if affected != 1 {
+		return fmt.Errorf("Seal is invalid, expired or already consumed")
+	}
+
+	return nil
 }

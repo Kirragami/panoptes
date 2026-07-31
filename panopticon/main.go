@@ -95,6 +95,15 @@ func (s *PanoptesServer) BindEye(
 		}, nil
 	}
 
+	if err := s.admitBind(eyeID, req.GetSeal()); err != nil {
+		log.Printf("[PANOPTICON] Bind refused for Eye %s: %v", eyeID, err)
+
+		return &proto.BindResponse{
+			Success:       false,
+			StatusMessage: err.Error(),
+		}, nil
+	}
+
 	s.recordSight(eyeID)
 
 	log.Printf("[PANOPTICON] Received binding request from Eye ID: %s", eyeID)
@@ -175,6 +184,18 @@ func main() {
 	}
 
 	go panoptesServer.watchForClosedEyes()
+
+	// this is a mint for testing purposes, dont forget to remove mkayy?? :))
+	seal, expiresAt, err := panoptesServer.issueSeal()
+	if err != nil {
+		log.Fatalf("Panopticon could not issue a test Seal: %v", err)
+	}
+
+	log.Printf(
+		"[PANOPTICON] Test Seal minted (expires %s): %s",
+		expiresAt.Format(time.RFC3339),
+		seal,
+	)
 
 	port := ":50051"
 	lis, err := net.Listen("tcp", port)
