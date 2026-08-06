@@ -95,7 +95,8 @@ func (s *PanoptesServer) BindEye(
 		}, nil
 	}
 
-	if err := s.admitBind(eyeID, req.GetSeal(), req.GetBrand()); err != nil {
+	brand, err := s.admitBind(eyeID, req.GetSeal(), req.GetBrand()) 
+	if err != nil {
 		log.Printf("[PANOPTICON] Bind refused for Eye %s: %v", eyeID, err)
 
 		return &proto.BindResponse{
@@ -107,16 +108,6 @@ func (s *PanoptesServer) BindEye(
 	s.recordSight(eyeID)
 
 	log.Printf("[PANOPTICON] Received binding request from Eye ID: %s", eyeID)
-
-	brand, err := s.brandEye(eyeID)
-	if err != nil {
-		log.Printf("[PANOPTICON] Branding failed for eye %s: %v", eyeID, err)
-
-		return &proto.BindResponse{
-			Success:       false,
-			StatusMessage: "failed to brand Eye",
-		}, nil
-	}
 
 	return &proto.BindResponse{
 		Success:       true,

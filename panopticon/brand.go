@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"strings"
 	"fmt"
-	"time"
 )
 
 func forgeBrand() (string, error) {
@@ -23,31 +22,6 @@ func forgeBrand() (string, error) {
 func hashBrand(brand string) string {
 	sum := sha256.Sum256([]byte(brand))
 	return hex.EncodeToString(sum[:])
-}
-
-func (s *PanoptesServer) brandEye(eyeID string) (string, error) {
-	_, exists, err := s.chronicle.RecallBrandHash(eyeID)
-	if err != nil {
-		return "", err
-	}
-	if exists {
-		return "", nil
-	}
-
-	brand, err := forgeBrand()
-	if err != nil {
-		return "", err
-	}
-
-	if err := s.chronicle.InscribeBrand(
-		eyeID,
-		hashBrand(brand),
-		time.Now().UTC(),
-	); err != nil {
-		return "", err
-	}
-
-	return brand, nil
 }
 
 func matchesBrand(brandHash, brand string) bool {

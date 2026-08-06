@@ -180,50 +180,6 @@ func (c *Chronicle) InscribeSeal(sealHash string, createdAt, expiresAt time.Time
 	return nil
 }
 
-func (c *Chronicle) ConsumeSeal(sealHash, eyeID string, consumedAt time.Time) error {
-	result, err := c.db.Exec(
-		`UPDATE seals
-		 SET consumed_at_unix = ?, bound_eye_id = ?
-		 WHERE seal_hash = ?
-		   AND consumed_at_unix IS NULL
-		   AND expires_at_unix >= ?`,
-		consumedAt.Unix(),
-		eyeID,
-		sealHash,
-		consumedAt.Unix(),
-	)
-	if err != nil {
-		return fmt.Errorf("consume Seal: %w", err)
-	}
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("seal consumption result: %w", err)
-	}
-
-	if affected != 1 {
-		return fmt.Errorf("Seal is invalid, expired or already consumed")
-	}
-
-	return nil
-}
-
-func (c *Chronicle) InscribeBrand(eyeID, brandHash string, createdAt time.Time) error {
-	_, err := c.db.Exec(
-		`INSERT INTO brands (eye_id, brand_hash, created_at_unix)
-		 VALUES (?, ?, ?)
-		 ON CONFLICT(eye_id) DO NOTHING`,
-		 eyeID,
-		 brandHash,
-		 createdAt.Unix(),
-	)
-	if err != nil {
-		return fmt.Errorf("inscribe Brand: %w", err)
-	}
-
-	return nil
-}
-
 func (c *Chronicle) RecallBrandHash(eyeID string) (string, bool, error) {
 	var brandHash string
 
@@ -240,4 +196,60 @@ func (c *Chronicle) RecallBrandHash(eyeID string) (string, bool, error) {
 	}
 
 	return brandHash, true, nil
+}
+
+func (c *Chronicle) ConsumeSealAndInscribeBrand(
+	sealHash string,
+	eyeID string,
+	brandHash string,
+	admittedAt time.Time,
+) error {
+	tx, err := c.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin Eye admission: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	result, err := tx.Exec(
+		`UPDATE seals
+		 SET consumed_at_unix = ?, bound_eye_id = ?
+		 WHERE seal_hash = ?
+		 	AND consumed_at_unix IS NULL
+			AND expires_at_unix >= ?`,
+		admittedAt.Unix(),
+		eyeID,
+		sealHash,
+		admittedAt.Unix(),
+	)
+	if err != nil {
+		return fmt.Errorf("consume Seal during admission: %w", err)
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("read Seal admission result: %w", err)
+	}
+
+	if affected != 1 {
+		return fmt.Errorf("Seal is invalid, expired or already consumed")
+	}
+
+	_, err = tx.Exec(
+		`INSERT INTO brands (eye_id, brand_hash, created_at_unix)
+		 VALUES (?, ?, ?)`,
+		eyeID,
+		brandHash,
+		admittedAt.Unix(),
+	)
+	if err != nil {
+		return fmt.Errorf("inscribe Brand during admission: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit Eye admission: %w", err)
+	}
+
+	return nil
 }

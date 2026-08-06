@@ -45,32 +45,40 @@ func (s *PanoptesServer) issueSeal() (string, time.Time, error) {
 	return seal, expiresAt, nil
 }
 
-func (s *PanoptesServer) admitBind(eyeID, seal, brand string) error {
+func (s *PanoptesServer) admitBind(eyeID, seal, brand string) (string, error) {
 	brandHash, branded, err := s.chronicle.RecallBrandHash(eyeID)
 	if err != nil {
-		return fmt.Errorf("recall Eye brand: %w", err)
+		return "", fmt.Errorf("recall Eye brand: %w", err)
 	}
 
 	if branded {
 		if !matchesBrand(brandHash, brand) {
-			return fmt.Errorf("valid Brand is required to Bind this Eye")
+			return "", fmt.Errorf("valid Brand is required to Bind this Eye")
 		}
 
-		return nil
+		return "", nil
 	}
 
 	seal = strings.TrimSpace(seal)
 	if seal == "" {
-		return fmt.Errorf("Seal is required to Bind a new Eye")
+		return "", fmt.Errorf("Seal is required to Bind a new Eye")
 	}
 
-	if err := s.chronicle.ConsumeSeal(
+	newBrand, err := forgeBrand()
+	if err != nil {
+		return "", err
+	}
+
+	admittedAt := time.Now().UTC()
+
+	if err := s.chronicle.ConsumeSealAndInscribeBrand(
 		hashSeal(seal),
 		eyeID,
-		time.Now().UTC(),
+		hashBrand(newBrand),
+		admittedAt,
 	); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return newBrand, nil
 }
