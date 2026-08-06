@@ -9,6 +9,7 @@ package proto
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -21,29 +22,30 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type BindRequest struct {
+type Vision struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	EyeId         string                 `protobuf:"bytes,1,opt,name=eye_id,json=eyeId,proto3" json:"eye_id,omitempty"`
-	Seal          string                 `protobuf:"bytes,2,opt,name=seal,proto3" json:"seal,omitempty"`
-	Brand         string                 `protobuf:"bytes,3,opt,name=brand,proto3" json:"brand,omitempty"`
+	Vision        string                 `protobuf:"bytes,1,opt,name=vision,proto3" json:"vision,omitempty"`
+	Form          uint32                 `protobuf:"varint,2,opt,name=form,proto3" json:"form,omitempty"`
+	Awake         bool                   `protobuf:"varint,3,opt,name=awake,proto3" json:"awake,omitempty"`
+	SlumberReason string                 `protobuf:"bytes,4,opt,name=slumber_reason,json=slumberReason,proto3" json:"slumber_reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *BindRequest) Reset() {
-	*x = BindRequest{}
+func (x *Vision) Reset() {
+	*x = Vision{}
 	mi := &file_mythos_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *BindRequest) String() string {
+func (x *Vision) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BindRequest) ProtoMessage() {}
+func (*Vision) ProtoMessage() {}
 
-func (x *BindRequest) ProtoReflect() protoreflect.Message {
+func (x *Vision) ProtoReflect() protoreflect.Message {
 	mi := &file_mythos_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -55,174 +57,66 @@ func (x *BindRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BindRequest.ProtoReflect.Descriptor instead.
-func (*BindRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use Vision.ProtoReflect.Descriptor instead.
+func (*Vision) Descriptor() ([]byte, []int) {
 	return file_mythos_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *BindRequest) GetEyeId() string {
+func (x *Vision) GetVision() string {
 	if x != nil {
-		return x.EyeId
+		return x.Vision
 	}
 	return ""
 }
 
-func (x *BindRequest) GetSeal() string {
+func (x *Vision) GetForm() uint32 {
 	if x != nil {
-		return x.Seal
-	}
-	return ""
-}
-
-func (x *BindRequest) GetBrand() string {
-	if x != nil {
-		return x.Brand
-	}
-	return ""
-}
-
-type BindResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	StatusMessage string                 `protobuf:"bytes,2,opt,name=status_message,json=statusMessage,proto3" json:"status_message,omitempty"`
-	Brand         string                 `protobuf:"bytes,3,opt,name=brand,proto3" json:"brand,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *BindResponse) Reset() {
-	*x = BindResponse{}
-	mi := &file_mythos_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *BindResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BindResponse) ProtoMessage() {}
-
-func (x *BindResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mythos_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BindResponse.ProtoReflect.Descriptor instead.
-func (*BindResponse) Descriptor() ([]byte, []int) {
-	return file_mythos_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *BindResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *BindResponse) GetStatusMessage() string {
-	if x != nil {
-		return x.StatusMessage
-	}
-	return ""
-}
-
-func (x *BindResponse) GetBrand() string {
-	if x != nil {
-		return x.Brand
-	}
-	return ""
-}
-
-type EyePulse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EyeId         string                 `protobuf:"bytes,1,opt,name=eye_id,json=eyeId,proto3" json:"eye_id,omitempty"`
-	SentAtUnix    int64                  `protobuf:"varint,2,opt,name=sent_at_unix,json=sentAtUnix,proto3" json:"sent_at_unix,omitempty"`
-	Brand         string                 `protobuf:"bytes,3,opt,name=brand,proto3" json:"brand,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *EyePulse) Reset() {
-	*x = EyePulse{}
-	mi := &file_mythos_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *EyePulse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*EyePulse) ProtoMessage() {}
-
-func (x *EyePulse) ProtoReflect() protoreflect.Message {
-	mi := &file_mythos_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use EyePulse.ProtoReflect.Descriptor instead.
-func (*EyePulse) Descriptor() ([]byte, []int) {
-	return file_mythos_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *EyePulse) GetEyeId() string {
-	if x != nil {
-		return x.EyeId
-	}
-	return ""
-}
-
-func (x *EyePulse) GetSentAtUnix() int64 {
-	if x != nil {
-		return x.SentAtUnix
+		return x.Form
 	}
 	return 0
 }
 
-func (x *EyePulse) GetBrand() string {
+func (x *Vision) GetAwake() bool {
 	if x != nil {
-		return x.Brand
+		return x.Awake
+	}
+	return false
+}
+
+func (x *Vision) GetSlumberReason() string {
+	if x != nil {
+		return x.SlumberReason
 	}
 	return ""
 }
 
-type PanopticonSignal struct {
+type Gaze struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Sigil         string                 `protobuf:"bytes,1,opt,name=sigil,proto3" json:"sigil,omitempty"`
+	Turn          uint64                 `protobuf:"varint,2,opt,name=turn,proto3" json:"turn,omitempty"`
+	Awake         bool                   `protobuf:"varint,3,opt,name=awake,proto3" json:"awake,omitempty"`
+	Vision        string                 `protobuf:"bytes,4,opt,name=vision,proto3" json:"vision,omitempty"`
+	Form          uint32                 `protobuf:"varint,5,opt,name=form,proto3" json:"form,omitempty"`
+	Focus         *structpb.Struct       `protobuf:"bytes,6,opt,name=focus,proto3" json:"focus,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PanopticonSignal) Reset() {
-	*x = PanopticonSignal{}
-	mi := &file_mythos_proto_msgTypes[3]
+func (x *Gaze) Reset() {
+	*x = Gaze{}
+	mi := &file_mythos_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PanopticonSignal) String() string {
+func (x *Gaze) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PanopticonSignal) ProtoMessage() {}
+func (*Gaze) ProtoMessage() {}
 
-func (x *PanopticonSignal) ProtoReflect() protoreflect.Message {
-	mi := &file_mythos_proto_msgTypes[3]
+func (x *Gaze) ProtoReflect() protoreflect.Message {
+	mi := &file_mythos_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -233,41 +127,70 @@ func (x *PanopticonSignal) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PanopticonSignal.ProtoReflect.Descriptor instead.
-func (*PanopticonSignal) Descriptor() ([]byte, []int) {
-	return file_mythos_proto_rawDescGZIP(), []int{3}
+// Deprecated: Use Gaze.ProtoReflect.Descriptor instead.
+func (*Gaze) Descriptor() ([]byte, []int) {
+	return file_mythos_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *PanopticonSignal) GetMessage() string {
+func (x *Gaze) GetSigil() string {
 	if x != nil {
-		return x.Message
+		return x.Sigil
 	}
 	return ""
+}
+
+func (x *Gaze) GetTurn() uint64 {
+	if x != nil {
+		return x.Turn
+	}
+	return 0
+}
+
+func (x *Gaze) GetAwake() bool {
+	if x != nil {
+		return x.Awake
+	}
+	return false
+}
+
+func (x *Gaze) GetVision() string {
+	if x != nil {
+		return x.Vision
+	}
+	return ""
+}
+
+func (x *Gaze) GetForm() uint32 {
+	if x != nil {
+		return x.Form
+	}
+	return 0
+}
+
+func (x *Gaze) GetFocus() *structpb.Struct {
+	if x != nil {
+		return x.Focus
+	}
+	return nil
 }
 
 var File_mythos_proto protoreflect.FileDescriptor
 
 const file_mythos_proto_rawDesc = "" +
 	"\n" +
-	"\fmythos.proto\x12\bpanoptes\"N\n" +
-	"\vBindRequest\x12\x15\n" +
-	"\x06eye_id\x18\x01 \x01(\tR\x05eyeId\x12\x12\n" +
-	"\x04seal\x18\x02 \x01(\tR\x04seal\x12\x14\n" +
-	"\x05brand\x18\x03 \x01(\tR\x05brand\"e\n" +
-	"\fBindResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12%\n" +
-	"\x0estatus_message\x18\x02 \x01(\tR\rstatusMessage\x12\x14\n" +
-	"\x05brand\x18\x03 \x01(\tR\x05brand\"Y\n" +
-	"\bEyePulse\x12\x15\n" +
-	"\x06eye_id\x18\x01 \x01(\tR\x05eyeId\x12 \n" +
-	"\fsent_at_unix\x18\x02 \x01(\x03R\n" +
-	"sentAtUnix\x12\x14\n" +
-	"\x05brand\x18\x03 \x01(\tR\x05brand\",\n" +
-	"\x10PanopticonSignal\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2\x8c\x01\n" +
-	"\x0fPanoptesService\x128\n" +
-	"\aBindEye\x12\x15.panoptes.BindRequest\x1a\x16.panoptes.BindResponse\x12?\n" +
-	"\tKeepVigil\x12\x12.panoptes.EyePulse\x1a\x1a.panoptes.PanopticonSignal(\x010\x01B%Z#github.com/Kirragami/panoptes/protob\x06proto3"
+	"\fmythos.proto\x12\bpanoptes\x1a\x1cgoogle/protobuf/struct.proto\"q\n" +
+	"\x06Vision\x12\x16\n" +
+	"\x06vision\x18\x01 \x01(\tR\x06vision\x12\x12\n" +
+	"\x04form\x18\x02 \x01(\rR\x04form\x12\x14\n" +
+	"\x05awake\x18\x03 \x01(\bR\x05awake\x12%\n" +
+	"\x0eslumber_reason\x18\x04 \x01(\tR\rslumberReason\"\xa1\x01\n" +
+	"\x04Gaze\x12\x14\n" +
+	"\x05sigil\x18\x01 \x01(\tR\x05sigil\x12\x12\n" +
+	"\x04turn\x18\x02 \x01(\x04R\x04turn\x12\x14\n" +
+	"\x05awake\x18\x03 \x01(\bR\x05awake\x12\x16\n" +
+	"\x06vision\x18\x04 \x01(\tR\x06vision\x12\x12\n" +
+	"\x04form\x18\x05 \x01(\rR\x04form\x12-\n" +
+	"\x05focus\x18\x06 \x01(\v2\x17.google.protobuf.StructR\x05focusB%Z#github.com/Kirragami/panoptes/protob\x06proto3"
 
 var (
 	file_mythos_proto_rawDescOnce sync.Once
@@ -281,23 +204,19 @@ func file_mythos_proto_rawDescGZIP() []byte {
 	return file_mythos_proto_rawDescData
 }
 
-var file_mythos_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_mythos_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_mythos_proto_goTypes = []any{
-	(*BindRequest)(nil),      // 0: panoptes.BindRequest
-	(*BindResponse)(nil),     // 1: panoptes.BindResponse
-	(*EyePulse)(nil),         // 2: panoptes.EyePulse
-	(*PanopticonSignal)(nil), // 3: panoptes.PanopticonSignal
+	(*Vision)(nil),          // 0: panoptes.Vision
+	(*Gaze)(nil),            // 1: panoptes.Gaze
+	(*structpb.Struct)(nil), // 2: google.protobuf.Struct
 }
 var file_mythos_proto_depIdxs = []int32{
-	0, // 0: panoptes.PanoptesService.BindEye:input_type -> panoptes.BindRequest
-	2, // 1: panoptes.PanoptesService.KeepVigil:input_type -> panoptes.EyePulse
-	1, // 2: panoptes.PanoptesService.BindEye:output_type -> panoptes.BindResponse
-	3, // 3: panoptes.PanoptesService.KeepVigil:output_type -> panoptes.PanopticonSignal
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	2, // 0: panoptes.Gaze.focus:type_name -> google.protobuf.Struct
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_mythos_proto_init() }
@@ -311,9 +230,9 @@ func file_mythos_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mythos_proto_rawDesc), len(file_mythos_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   2,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   0,
 		},
 		GoTypes:           file_mythos_proto_goTypes,
 		DependencyIndexes: file_mythos_proto_depIdxs,

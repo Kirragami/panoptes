@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+option go_package = "github.com/Kirragami/panoptes/proto";
+
+package panoptes;
+
+import "binding.proto";
+import "vigil.proto";
+
+service PanoptesService {
+    rpc BindEye(BindRequest) returns (BindResponse);
+    rpc KeepVigil(stream EyePulse) returns (stream PanopticonSignal);
+}

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "github.com/Kirragami/panoptes/proto";
+
+package panoptes;
+
+import "mythos.proto";
+
+message EyePulse {
+    string eye_id = 1;
+    int64 sent_at_unix = 2;
+    string brand = 3;
+}
+
+message PanopticonSignal {
+    string message = 1;
+    Gaze gaze = 2;
+}

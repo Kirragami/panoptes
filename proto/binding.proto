@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option go_package = "github.com/Kirragami/panoptes/proto";
+
+package panoptes;
+
+import "mythos.proto";
+
+message BindRequest {
+    string eye_id = 1;
+    string seal = 2;
+    string brand = 3;
+    repeated Vision visions = 4;
+}
+
+message BindResponse {
+    bool success = 1;
+    string status_message = 2;
+    string brand = 3;
+}

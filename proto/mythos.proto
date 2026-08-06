@@ -4,29 +4,21 @@ option go_package = "github.com/Kirragami/panoptes/proto";
 
 package panoptes;
 
-service PanoptesService {
-    rpc BindEye(BindRequest) returns (BindResponse);
-    rpc KeepVigil(stream EyePulse) returns (stream PanopticonSignal);
+import "google/protobuf/struct.proto";
+
+message Vision {
+    string vision = 1;
+    uint32 form = 2;
+    bool awake = 3;
+    string slumber_reason = 4;
 }
 
-message BindRequest {
-    string eye_id = 1;
-    string seal = 2;
-    string brand = 3;
-}
+message Gaze {
+    string sigil = 1;
+    uint64 turn = 2;
+    bool awake = 3;
 
-message BindResponse {
-    bool success = 1;
-    string status_message = 2;
-    string brand = 3;
-}
-
-message EyePulse {
-    string eye_id = 1;
-    int64 sent_at_unix = 2;
-    string brand = 3;
-}
-
-message PanopticonSignal {
-    string message = 1;
+    string vision = 4;
+    uint32 form = 5;
+    google.protobuf.Struct focus = 6;
 }
