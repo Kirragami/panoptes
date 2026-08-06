@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -20,6 +21,11 @@ func forgeSeal() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
+func hashSeal(seal string) string {
+	sum := sha256.Sum256([]byte(seal))
+	return hex.EncodeToString(sum[:])
+}
+
 func (s *PanoptesServer) issueSeal() (string, time.Time, error) {
 	seal, err := forgeSeal()
 	if err != nil {
@@ -29,8 +35,10 @@ func (s *PanoptesServer) issueSeal() (string, time.Time, error) {
 	createdAt := time.Now().UTC()
 	expiresAt := createdAt.Add(sealTTL)
 
-	// need to store in a better way bro cmon :'))
-	if err := s.chronicle.InscribeSeal(seal, createdAt, expiresAt); err != nil {
+	if err := s.chronicle.InscribeSeal(
+		hashSeal(seal),
+		createdAt,
+		expiresAt); err != nil {
 		return "", time.Time{}, err
 	}
 
@@ -56,7 +64,11 @@ func (s *PanoptesServer) admitBind(eyeID, seal, brand string) error {
 		return fmt.Errorf("Seal is required to Bind a new Eye")
 	}
 
-	if err := s.chronicle.ConsumeSeal(seal, eyeID, time.Now().UTC()); err != nil {
+	if err := s.chronicle.ConsumeSeal(
+		hashSeal(seal),
+		eyeID,
+		time.Now().UTC(),
+	); err != nil {
 		return err
 	}
 

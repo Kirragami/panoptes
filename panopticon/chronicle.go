@@ -43,7 +43,7 @@ func openChronicle(path string) (*Chronicle, error) {
 
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS seals (
-			seal TEXT PRIMARY KEY,
+			seal_hash TEXT PRIMARY KEY,
 			created_at_unix INTEGER NOT NULL,
 			expires_at_unix INTEGER NOT NULL,
 			consumed_at_unix INTEGER,
@@ -165,11 +165,11 @@ func (c *Chronicle) RecallSightings() ([]Sighting, error) {
 	return sightings, nil
 }
 
-func (c *Chronicle) InscribeSeal(seal string, createdAt, expiresAt time.Time) error {
+func (c *Chronicle) InscribeSeal(sealHash string, createdAt, expiresAt time.Time) error {
 	_, err := c.db.Exec(
-		`INSERT INTO seals (seal, created_at_unix, expires_at_unix)
+		`INSERT INTO seals (seal_hash, created_at_unix, expires_at_unix)
 		 VALUES (?, ?, ?)`,
-		seal,
+		sealHash,
 		createdAt.Unix(),
 		expiresAt.Unix(),
 	)
@@ -180,16 +180,16 @@ func (c *Chronicle) InscribeSeal(seal string, createdAt, expiresAt time.Time) er
 	return nil
 }
 
-func (c *Chronicle) ConsumeSeal(seal, eyeID string, consumedAt time.Time) error {
+func (c *Chronicle) ConsumeSeal(sealHash, eyeID string, consumedAt time.Time) error {
 	result, err := c.db.Exec(
 		`UPDATE seals
 		 SET consumed_at_unix = ?, bound_eye_id = ?
-		 WHERE seal = ?
+		 WHERE seal_hash = ?
 		   AND consumed_at_unix IS NULL
 		   AND expires_at_unix >= ?`,
 		consumedAt.Unix(),
 		eyeID,
-		seal,
+		sealHash,
 		consumedAt.Unix(),
 	)
 	if err != nil {
