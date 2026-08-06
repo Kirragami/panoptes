@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"github.com/Kirragami/panoptes/proto"
+	"github.com/Kirragami/panoptes/eye/visions"
 	"google.golang.org/grpc"
 )
 
@@ -14,6 +15,7 @@ func bindEye(
 	ctx context.Context,
 	iris *Iris,
 	eyeID string,
+	registry *visions.Registry,
 ) error {
 	connection, err := grpc.NewClient(
 		"passthrough:///"+iris.PanopticonEndpoint,
@@ -29,10 +31,16 @@ func bindEye(
 
 	panopticon := proto.NewPanoptesServiceClient(connection)
 
+	revelations, err := registry.BeholdAll(ctx)
+	if err != nil {
+		return fmt.Errorf("behold Eye Visions: %w", err)
+	}
+
 	response, err := panopticon.BindEye(ctx, &proto.BindRequest{
 		EyeId: eyeID,
 		Seal:  iris.Seal,
 		Brand: iris.Brand,
+		Visions: revelations,
 	})
 	if err != nil {
 		return fmt.Errorf("bind Eye to Panopticon: %w", err)

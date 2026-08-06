@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Kirragami/panoptes/proto"
+	"github.com/Kirragami/panoptes/eye/visions"
 	"google.golang.org/grpc"
 )
 
@@ -66,7 +67,11 @@ func keepVigil(
 	}
 }
 
-func maintainVigil(iris Iris, eyeID string) {
+func maintainVigil(
+		iris Iris, 
+		eyeID string,
+		registry *visions.Registry,
+	) {
 	retryDelay := time.Second
 	maxRetryDelay := 30 * time.Second
 
@@ -76,7 +81,7 @@ func maintainVigil(iris Iris, eyeID string) {
 			5*time.Second,
 		)
 
-		err := bindEye(bindContext, &iris, eyeID)
+		err := bindEye(bindContext, &iris, eyeID, registry)
 		cancelBind()
 
 		if err == nil {
