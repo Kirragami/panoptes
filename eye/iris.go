@@ -11,8 +11,10 @@ type Iris struct {
 	PanopticonEndpoint   string
 	PanopticonServerName string
 	Seal                 string
+	Brand                string
 	StateDir             string
 }
+
 
 func openIris() (Iris, error) {
 	endpoint := strings.TrimSpace(os.Getenv("PANOPTICON_ENDPOINT"))

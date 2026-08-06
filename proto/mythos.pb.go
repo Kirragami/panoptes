@@ -25,6 +25,7 @@ type BindRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EyeId         string                 `protobuf:"bytes,1,opt,name=eye_id,json=eyeId,proto3" json:"eye_id,omitempty"`
 	Seal          string                 `protobuf:"bytes,2,opt,name=seal,proto3" json:"seal,omitempty"`
+	Brand         string                 `protobuf:"bytes,3,opt,name=brand,proto3" json:"brand,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -73,10 +74,18 @@ func (x *BindRequest) GetSeal() string {
 	return ""
 }
 
+func (x *BindRequest) GetBrand() string {
+	if x != nil {
+		return x.Brand
+	}
+	return ""
+}
+
 type BindResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	StatusMessage string                 `protobuf:"bytes,2,opt,name=status_message,json=statusMessage,proto3" json:"status_message,omitempty"`
+	Brand         string                 `protobuf:"bytes,3,opt,name=brand,proto3" json:"brand,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -125,10 +134,18 @@ func (x *BindResponse) GetStatusMessage() string {
 	return ""
 }
 
+func (x *BindResponse) GetBrand() string {
+	if x != nil {
+		return x.Brand
+	}
+	return ""
+}
+
 type EyePulse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EyeId         string                 `protobuf:"bytes,1,opt,name=eye_id,json=eyeId,proto3" json:"eye_id,omitempty"`
 	SentAtUnix    int64                  `protobuf:"varint,2,opt,name=sent_at_unix,json=sentAtUnix,proto3" json:"sent_at_unix,omitempty"`
+	Brand         string                 `protobuf:"bytes,3,opt,name=brand,proto3" json:"brand,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -175,6 +192,13 @@ func (x *EyePulse) GetSentAtUnix() int64 {
 		return x.SentAtUnix
 	}
 	return 0
+}
+
+func (x *EyePulse) GetBrand() string {
+	if x != nil {
+		return x.Brand
+	}
+	return ""
 }
 
 type PanopticonSignal struct {
@@ -225,17 +249,20 @@ var File_mythos_proto protoreflect.FileDescriptor
 
 const file_mythos_proto_rawDesc = "" +
 	"\n" +
-	"\fmythos.proto\x12\bpanoptes\"8\n" +
+	"\fmythos.proto\x12\bpanoptes\"N\n" +
 	"\vBindRequest\x12\x15\n" +
 	"\x06eye_id\x18\x01 \x01(\tR\x05eyeId\x12\x12\n" +
-	"\x04seal\x18\x02 \x01(\tR\x04seal\"O\n" +
+	"\x04seal\x18\x02 \x01(\tR\x04seal\x12\x14\n" +
+	"\x05brand\x18\x03 \x01(\tR\x05brand\"e\n" +
 	"\fBindResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12%\n" +
-	"\x0estatus_message\x18\x02 \x01(\tR\rstatusMessage\"C\n" +
+	"\x0estatus_message\x18\x02 \x01(\tR\rstatusMessage\x12\x14\n" +
+	"\x05brand\x18\x03 \x01(\tR\x05brand\"Y\n" +
 	"\bEyePulse\x12\x15\n" +
 	"\x06eye_id\x18\x01 \x01(\tR\x05eyeId\x12 \n" +
 	"\fsent_at_unix\x18\x02 \x01(\x03R\n" +
-	"sentAtUnix\",\n" +
+	"sentAtUnix\x12\x14\n" +
+	"\x05brand\x18\x03 \x01(\tR\x05brand\",\n" +
 	"\x10PanopticonSignal\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage2\x8c\x01\n" +
 	"\x0fPanoptesService\x128\n" +

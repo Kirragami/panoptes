@@ -29,6 +29,7 @@ func (s *PanoptesServer) issueSeal() (string, time.Time, error) {
 	createdAt := time.Now().UTC()
 	expiresAt := createdAt.Add(sealTTL)
 
+	// need to store in a better way bro cmon :'))
 	if err := s.chronicle.InscribeSeal(seal, createdAt, expiresAt); err != nil {
 		return "", time.Time{}, err
 	}
@@ -36,21 +37,21 @@ func (s *PanoptesServer) issueSeal() (string, time.Time, error) {
 	return seal, expiresAt, nil
 }
 
-func (s *PanoptesServer) isKnownEye(eyeID string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *PanoptesServer) admitBind(eyeID, seal, brand string) error {
+	brandHash, branded, err := s.chronicle.RecallBrandHash(eyeID)
+	if err != nil {
+		return fmt.Errorf("recall Eye brand: %w", err)
+	}
 
-	_, known := s.eyes[eyeID]
-	return known
-}
+	if branded {
+		if !matchesBrand(brandHash, brand) {
+			return fmt.Errorf("valid Brand is required to Bind this Eye")
+		}
 
-func (s *PanoptesServer) admitBind(eyeID, seal string) error {
-	seal = strings.TrimSpace(seal)
-
-	if s.isKnownEye(eyeID) && seal == "" {
 		return nil
 	}
 
+	seal = strings.TrimSpace(seal)
 	if seal == "" {
 		return fmt.Errorf("Seal is required to Bind a new Eye")
 	}

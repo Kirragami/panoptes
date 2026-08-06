@@ -15,6 +15,13 @@ func main() {
 		log.Fatalf("Eye failed to establish its identity: %v", err)
 	}
 
+	brand, err := recallBrand(iris.StateDir)
+	if err != nil {
+		log.Fatalf("Eye failed to recall its Brand: %v", err)
+	}
+
+	iris.Brand = brand
+
 	log.Printf(
 		"Eye identity: %s; Panopticon: %s",
 		eyeID,

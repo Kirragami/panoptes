@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 
 	"github.com/Kirragami/panoptes/proto"
@@ -11,7 +12,7 @@ import (
 
 func bindEye(
 	ctx context.Context,
-	iris Iris,
+	iris *Iris,
 	eyeID string,
 ) error {
 	connection, err := grpc.NewClient(
@@ -31,6 +32,7 @@ func bindEye(
 	response, err := panopticon.BindEye(ctx, &proto.BindRequest{
 		EyeId: eyeID,
 		Seal:  iris.Seal,
+		Brand: iris.Brand,
 	})
 	if err != nil {
 		return fmt.Errorf("bind Eye to Panopticon: %w", err)
@@ -38,6 +40,24 @@ func bindEye(
 
 	if !response.GetSuccess() {
 		return fmt.Errorf("Panopticon rejected Bind: %s", response.GetStatusMessage())
+	}
+
+	
+
+	grantedBrand := response.GetBrand()
+
+	if grantedBrand != "" {
+		if err := imprintBrand(iris.StateDir, grantedBrand); err != nil {
+			return fmt.Errorf("imprint granted Brand: %w", err)
+		}
+
+		iris.Brand = grantedBrand
+		log.Printf("[EYE] Eye has been granted its Brand")
+	}
+
+	if iris.Seal != "" {
+		iris.Seal = ""
+		log.Printf("[EYE] Seal has been used and discarded")
 	}
 
 	return nil

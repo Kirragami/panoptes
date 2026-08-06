@@ -13,7 +13,7 @@ import (
 
 func keepVigil(
 	ctx context.Context,
-	iris Iris,
+	iris *Iris,
 	eyeID string,
 ) error {
 	connection, err := grpc.NewClient(
@@ -75,7 +75,7 @@ func maintainVigil(iris Iris, eyeID string) {
 			5*time.Second,
 		)
 
-		err := bindEye(bindContext, iris, eyeID)
+		err := bindEye(bindContext, &iris, eyeID)
 		cancelBind()
 
 		if err == nil {
@@ -85,7 +85,7 @@ func maintainVigil(iris Iris, eyeID string) {
 
 			err = keepVigil(
 				context.Background(),
-				iris,
+				&iris,
 				eyeID,
 			)
 		}

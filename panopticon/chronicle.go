@@ -55,6 +55,18 @@ func openChronicle(path string) (*Chronicle, error) {
 		return nil, fmt.Errorf("prepare Chronicle seals: %w", err)
 	}
 
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS brands (
+			eye_id TEXT PRIMARY KEY,
+			brand_hash TEXT NOT NULL,
+			created_at_unix INTEGER NOT NULL
+		);
+	`)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("prepare Chronicle brands: %w", err)
+	}
+
 	return &Chronicle{db: db}, nil
 }
 
@@ -194,4 +206,38 @@ func (c *Chronicle) ConsumeSeal(seal, eyeID string, consumedAt time.Time) error 
 	}
 
 	return nil
+}
+
+func (c *Chronicle) InscribeBrand(eyeID, brandHash string, createdAt time.Time) error {
+	_, err := c.db.Exec(
+		`INSERT INTO brands (eye_id, brand_hash, created_at_unix)
+		 VALUES (?, ?, ?)
+		 ON CONFLICT(eye_id) DO NOTHING`,
+		 eyeID,
+		 brandHash,
+		 createdAt.Unix(),
+	)
+	if err != nil {
+		return fmt.Errorf("inscribe Brand: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Chronicle) RecallBrandHash(eyeID string) (string, bool, error) {
+	var brandHash string
+
+	err := c.db.QueryRow(
+		`SELECT brand_hash FROM brands WHERE eye_id = ?`,
+		eyeID,
+	).Scan(&brandHash)
+
+	if err == sql.ErrNoRows {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, fmt.Errorf("recall Brand: %w", err)
+	}
+
+	return brandHash, true, nil
 }
