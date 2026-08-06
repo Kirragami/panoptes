@@ -43,6 +43,7 @@ func keepVigil(
 		pulse := &proto.EyePulse{
 			EyeId:      eyeID,
 			SentAtUnix: time.Now().Unix(),
+			Brand:      iris.Brand,
 		}
 
 		if err := vigil.Send(pulse); err != nil {

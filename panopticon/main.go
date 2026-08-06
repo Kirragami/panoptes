@@ -113,7 +113,7 @@ func (s *PanoptesServer) BindEye(
 		log.Printf("[PANOPTICON] Branding failed for eye %s: %v", eyeID, err)
 
 		return &proto.BindResponse{
-			Success: false,
+			Success:       false,
 			StatusMessage: "failed to brand Eye",
 		}, nil
 	}
@@ -142,6 +142,23 @@ func (s *PanoptesServer) KeepVigil(
 		eyeID := strings.TrimSpace(pulse.GetEyeId())
 		if eyeID == "" {
 			return status.Error(codes.InvalidArgument, "eye_id is required")
+		}
+
+		brandHash, branded, err := s.chronicle.RecallBrandHash(eyeID)
+		if err != nil {
+			return status.Error(
+				codes.Internal,
+				"Panopticon could not recall the Eye's Brand",
+			)
+		}
+
+		if !branded || !matchesBrand(brandHash, pulse.GetBrand()) {
+			log.Printf("[PANOPTICON] Vigil refused for Eye %s: invalid Brand", eyeID)
+
+			return status.Error(
+				codes.Unauthenticated,
+				"valid Brand is required to keep Vigil",
+			)
 		}
 
 		s.recordSight(eyeID)
