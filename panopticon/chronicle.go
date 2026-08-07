@@ -4,6 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+	"strings"
+
+	// "github.com/Kirragami/panoptes/proto"
+	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	_ "modernc.org/sqlite"
 )
@@ -20,6 +25,16 @@ type VisionRecord struct {
 	Awake         bool
 	SlumberReason string
 	BeheldAt      time.Time
+}
+
+type GazeRecord struct {
+	EyeID string
+	Sigil string
+	Turn  uint64
+	Awake bool
+	Sight string
+	Form  uint32
+	Focus *structpb.Struct
 }
 
 type Chronicle struct {
@@ -89,6 +104,24 @@ func openChronicle(path string) (*Chronicle, error) {
 	if err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("prepare Chronicle Visions: %w", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS eye_gazes (
+			eye_id TEXT NOT NULL,
+			sigil TEXT NOT NULL,
+			turn INTEGER NOT NULL,
+			awake INTEGER NOT NULL,
+			sight TEXT NOT NULL,
+			form INTEGER NOT NULL,
+			focus_json TEXT NOT NULL,
+			updated_at_unix INTEGER NOT NULL,
+			PRIMARY KEY (eye_id, sigil)
+		);
+	`)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("prepare Gaze Chronicles: %w", err)
 	}
 
 	return &Chronicle{db: db}, nil
@@ -330,4 +363,110 @@ func (c *Chronicle) RememberVisions(
 	}
 
 	return nil
+}
+
+func (c *Chronicle) EngraveGaze(
+	gaze GazeRecord,
+	engravedAt time.Time,
+) (GazeRecord, error) {
+	gaze.EyeID = strings.TrimSpace(gaze.EyeID)
+	gaze.Sigil = strings.TrimSpace(gaze.Sigil)
+	gaze.Sight = strings.TrimSpace(gaze.Sight)
+
+	if gaze.EyeID == "" {
+		return GazeRecord{}, fmt.Errorf("Gaze is from a dead Eye")
+	}
+
+	if gaze.Sigil == "" {
+		return GazeRecord{}, fmt.Errorf("Gaze has no Sigil")
+	}
+
+	if gaze.Sight == "" {
+		return GazeRecord{}, fmt.Errorf("Gaze %s has no Sight", gaze.Sigil)
+	}
+
+	if gaze.Form == 0 {
+		return GazeRecord{}, fmt.Errorf(
+			"Gaze %s has an invalid form",
+			gaze.Sigil,
+		)
+	}
+
+	if gaze.Focus == nil {
+		gaze.Focus = &structpb.Struct{}
+	}
+
+	focusJSON, err := protojson.Marshal(gaze.Focus)
+	if err != nil {
+		return GazeRecord{}, fmt.Errorf(
+			"shape Gaze %s focus: %w",
+			gaze.Sigil,
+			err,
+		)
+	}
+
+	tx, err := c.db.Begin()
+	if err != nil {
+		return GazeRecord{}, fmt.Errorf("begin Gaze engraving: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	var previousTurn uint64
+
+	err = tx.QueryRow(
+		`SELECT turn
+		 FROM eye_gazes
+	     WHERE eye_id = ? AND sigil = ?`,
+		gaze.EyeID,
+		gaze.Sigil,
+	).Scan(&previousTurn)
+
+	if err == sql.ErrNoRows {
+		gaze.Turn = 1
+	} else if err != nil {
+		return GazeRecord{}, fmt.Errorf(
+			"recall previous Gaze turn: %w",
+			err,
+		)
+	} else {
+		gaze.Turn = previousTurn + 1
+	}
+
+	_, err = tx.Exec(
+		`INSERT INTO eye_gazes (
+			eye_id,
+			sigil,
+			turn,
+			awake,
+			sight,
+			form,
+			focus_json,
+			updated_at_unix	
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(eye_id, sigil) DO UPDATE SET
+			turn = excluded.turn,
+			awake = excluded.awake,
+			sight = excluded.sight,
+			form = excluded.form,
+			focus_json = excluded.focus_json,
+			updated_at_unix = excluded.updated_at_unix,`,
+		gaze.EyeID,
+		gaze.Sigil,
+		gaze.Turn,
+		gaze.Awake,
+		gaze.Sight,
+		gaze.Form,
+		string(focusJSON),
+		engravedAt.Unix(),
+	)
+	if err := tx.Commit(); err != nil {
+		return GazeRecord{}, fmt.Errorf(
+			"commit Gaze engraving: %w",
+			err,
+		)
+	}
+
+	return gaze, nil
 }
