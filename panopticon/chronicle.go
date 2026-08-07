@@ -3,12 +3,12 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	// "github.com/Kirragami/panoptes/proto"
-	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	_ "modernc.org/sqlite"
 )
@@ -451,7 +451,7 @@ func (c *Chronicle) EngraveGaze(
 			sight = excluded.sight,
 			form = excluded.form,
 			focus_json = excluded.focus_json,
-			updated_at_unix = excluded.updated_at_unix,`,
+			updated_at_unix = excluded.updated_at_unix`,
 		gaze.EyeID,
 		gaze.Sigil,
 		gaze.Turn,
@@ -461,6 +461,13 @@ func (c *Chronicle) EngraveGaze(
 		string(focusJSON),
 		engravedAt.Unix(),
 	)
+	if err != nil {
+		return GazeRecord{}, fmt.Errorf(
+			"engrave Gaze %s: %w",
+			gaze.Sigil,
+			err,
+		)
+	}
 	if err := tx.Commit(); err != nil {
 		return GazeRecord{}, fmt.Errorf(
 			"commit Gaze engraving: %w",
