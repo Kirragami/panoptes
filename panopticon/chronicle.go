@@ -14,6 +14,14 @@ type Sighting struct {
 	LastSeen  time.Time
 }
 
+type VisionRecord struct {
+	Sight         string
+	Form          uint32
+	Awake         bool
+	SlumberReason string
+	BeheldAt      time.Time
+}
+
 type Chronicle struct {
 	db *sql.DB
 }
@@ -65,6 +73,22 @@ func openChronicle(path string) (*Chronicle, error) {
 	if err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("prepare Chronicle brands: %w", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS eye_visions (
+			eye_id TEXT NOT NULL,
+			sight TEXT NOT NULL,
+			form INTEGER NOT NULL,
+			awake INTEGER NOT NULL,
+			slumber_reason TEXT NOT NULL,
+			beheld_at_unix INTEGER NOT NULL,
+			PRIMARY KEY (eye_id, sight)
+		);
+	`)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("prepare Chronicle Visions: %w", err)
 	}
 
 	return &Chronicle{db: db}, nil
@@ -249,6 +273,60 @@ func (c *Chronicle) ConsumeSealAndInscribeBrand(
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit Eye admission: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Chronicle) RememberVisions(
+	eyeID string,
+	visions []VisionRecord,
+	beheldAt time.Time,
+) error {
+	tx, err := c.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin Vision remembrance: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	_, err = tx.Exec(
+		`DELETE FROM eye_visions WHERE eye_id = ?`,
+		eyeID,
+	)
+	if err != nil {
+		return fmt.Errorf("forget old Visions: %w", err)
+	}
+
+	for _, vision := range visions {
+		_, err = tx.Exec(
+			`INSERT INTO eye_visions (
+					eye_id,
+					sight,
+					form,
+					awake,
+					slumber_reason,
+					beheld_at_unix
+				) VALUES (?, ?, ?, ?, ?, ?)`,
+			eyeID,
+			vision.Sight,
+			vision.Form,
+			vision.Awake,
+			vision.SlumberReason,
+			beheldAt.Unix(),
+		)
+		if err != nil {
+			return fmt.Errorf(
+				"remember Vision %s: %w",
+				vision.Sight,
+				err,
+			)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit Vision remembrance: %w", err)
 	}
 
 	return nil

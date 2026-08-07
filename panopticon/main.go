@@ -105,6 +105,18 @@ func (s *PanoptesServer) BindEye(
 		}, nil
 	}
 
+	if err := s.rememberRevelations(
+		eyeID,
+		req.GetVisions(),
+	); err != nil {
+		log.Printf(
+			// ---- not me giggling to this chuunibyou ahh naming scheme of mine lmao
+			"[PANOPTICON] Failed to remember Visions of the Eye %s: %v",
+			eyeID,
+			err,
+		)
+	}
+
 	s.recordSight(eyeID)
 
 	log.Printf("[PANOPTICON] Received binding request from Eye ID: %s", eyeID)
