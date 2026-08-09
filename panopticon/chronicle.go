@@ -477,3 +477,157 @@ func (c *Chronicle) EngraveGaze(
 
 	return gaze, nil
 }
+
+func (c *Chronicle) RecallGazes(
+	eyeID string,
+) ([]GazeRecord, error) {
+	eyeID = strings.TrimSpace(eyeID)
+	if eyeID == "" {
+		return nil, fmt.Errorf("cannot recall Gazes for an empty Eye")
+	}
+
+	rows, err := c.db.Query(
+		`SELECT
+			sigil,
+			turn,
+			awake,
+			sight,
+			form,
+			focus_json
+		FROM eye_gazes
+		WHERE eye_id = ?
+		ORDER BY sigil ASC`,
+		eyeID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("recall Gazes: %w", err)
+	}
+	defer rows.Close()
+
+	var gazes []GazeRecord
+
+	for rows.Next() {
+		var gaze GazeRecord
+		var turn int64
+		var awake int64
+		var form int64
+		var focusJSON string
+
+		if err := rows.Scan(
+			&gaze.Sigil,
+			&turn,
+			&awake,
+			&gaze.Sight,
+			&form,
+			&focusJSON,
+		); err != nil {
+			return nil, fmt.Errorf("read Gaze: %w", err)
+		}
+
+		if turn < 1 {
+			return nil, fmt.Errorf(
+				"Gaze %s has an invalid turn",
+				gaze.Sigil,
+			)
+		}
+
+		if form < 1 {
+			return nil, fmt.Errorf(
+				"Gaze %s has an invalid form",
+				gaze.Sigil,
+			)
+		}
+
+		focus := &structpb.Struct{}
+		if err :=protojson.Unmarshal(
+			[]byte(focusJSON),
+			focus,
+		); err != nil {
+			return nil, fmt.Errorf(
+				"shape recalled Gaze %s focus: %w",
+				gaze.Sigil,
+				err,
+			)
+		}
+
+		gaze.EyeID = eyeID
+		gaze.Turn = uint64(turn)
+		gaze.Awake = awake != 0
+		gaze.Form = uint32(form)
+		gaze.Focus = focus
+
+		gazes = append(gazes, gaze)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate Gazes: %w", err)
+	}
+
+	return gazes, nil
+}
+func (c *Chronicle) RecallVision(
+	eyeID string,
+	sight string,
+) (VisionRecord, bool, error) {
+	eyeID = strings.TrimSpace(eyeID)
+	sight = strings.TrimSpace(sight)
+
+	if eyeID == "" {
+		return VisionRecord{}, false, fmt.Errorf(
+			"cannot recall Vision for an empty Eye",
+		)
+	}
+
+	if sight == "" {
+		return VisionRecord{}, false, fmt.Errorf(
+			"cannot recall an empty Sight",
+		)
+	}
+
+	var vision VisionRecord
+	var form int64
+	var awake int64
+	var beheldAtUnix int64
+
+	err := c.db.QueryRow(
+		`SELECT 
+			form,
+			awake,
+			slumber_reason,
+			beheld_at_unix
+		FROM eye_visions
+		WHERE eye_id = ? AND sight = ?`,
+		eyeID,
+		sight,
+	).Scan(
+		&form,
+		&awake,
+		&vision.SlumberReason,
+		&beheldAtUnix,
+	)
+	if err == sql.ErrNoRows {
+		return VisionRecord{}, false, nil
+	}
+
+	if err != nil {
+		return VisionRecord{}, false, fmt.Errorf(
+			"recall Vision %s: %w",
+			sight,
+			err,
+		)
+	}
+
+	if form < 1 {
+		return VisionRecord{}, false, fmt.Errorf(
+			"Vision %s has an invalid form",
+			sight,
+		)
+	}
+
+	vision.Sight = sight
+	vision.Form = uint32(form)
+	vision.Awake = awake != 0
+	vision.BeheldAt = time.Unix(beheldAtUnix, 0).UTC()
+
+	return vision, true, nil
+}
