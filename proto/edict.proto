@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option go_package = "github.com/Kirragami/panoptes/proto";
+
+package panoptes;
+
+import "mythos.proto";
+
+service PanopticonEdictService {
+    rpc BestowGaze(BestowGazeRequest) returns (BestowGazeResponse);
+}
+
+message BestowGazeRequest {
+    string eye_id = 1;
+    string gaze = 2;
+}
+
+message BestowGazeResponse {
+    bool success = 1;
+    string status_message = 2;
+    Gaze gaze = 3;
+}
