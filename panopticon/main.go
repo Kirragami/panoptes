@@ -25,6 +25,7 @@ type EyeState struct {
 type PanoptesServer struct {
 	proto.UnimplementedPanoptesServiceServer
 	proto.UnimplementedPanopticonEdictServiceServer
+	proto.UnimplementedPanoptesOmenServiceServer
 
 	mu         sync.Mutex
 	eyes       map[string]EyeState
@@ -184,8 +185,8 @@ func (s *PanoptesServer) KeepVigil(
 
 		for _, remembered := range rememberedGazes {
 			gazes = append(gazes, revealGaze(remembered))
-		} 
-		
+		}
+
 		log.Printf(
 			"[PANOPTICON] Vigil from Eye %s at %d",
 			eyeID,
@@ -193,7 +194,7 @@ func (s *PanoptesServer) KeepVigil(
 		)
 
 		// gaze configs will be send over vigil for now
-		// change it to instant send to eye in later versions kay? 
+		// change it to instant send to eye in later versions kay?
 		// not to mention the strain on db for this :'))
 		signal := &proto.PanopticonSignal{
 			Message: "Panopticon sees you, Eye " + eyeID,
@@ -276,6 +277,10 @@ func main() {
 	)
 	proto.RegisterPanoptesServiceServer(grpcServer, panoptesServer)
 	proto.RegisterPanopticonEdictServiceServer(
+		grpcServer,
+		panoptesServer,
+	)
+	proto.RegisterPanoptesOmenServiceServer(
 		grpcServer,
 		panoptesServer,
 	)
