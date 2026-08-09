@@ -31,6 +31,7 @@ type PanoptesServer struct {
 	eyes       map[string]EyeState
 	chronicle  *Chronicle
 	edictToken string
+	harbinger  Harbinger
 }
 
 func (s *PanoptesServer) recordSight(eyeID string) {
@@ -250,6 +251,7 @@ func main() {
 		eyes:       eyes,
 		chronicle:  chronicle,
 		edictToken: edictToken,
+		harbinger: LogHarbinger{},
 	}
 
 	go panoptesServer.watchForClosedEyes()

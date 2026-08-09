@@ -85,17 +85,19 @@ func (s *PanoptesServer) RaiseOmen(
 		}, nil
 	}
 
-	isNew, err := s.chronicle.ReceiveOmen(OmenRecord{
-		OmenID:     omen.GetOmenId(),
-		EyeID:      omen.GetEyeId(),
-		GazeSigil:  omen.GetGazeSigil(),
-		GazeTurn:   omen.GetGazeTurn(),
+	receivedOmen := OmenRecord{
+		OmenID:    omen.GetOmenId(),
+		EyeID:     omen.GetEyeId(),
+		GazeSigil: omen.GetGazeSigil(),
+		GazeTurn:  omen.GetGazeTurn(),
 		BefallenAt: time.Unix(
 			omen.GetBefallenAtUnix(),
 			0,
 		).UTC(),
 		ReceivedAt: time.Now().UTC(),
-	})
+	}
+
+	isNew, err := s.chronicle.ReceiveOmen(receivedOmen)
 	if err != nil {
 		return nil, status.Error(
 			codes.Internal,
@@ -108,6 +110,14 @@ func (s *PanoptesServer) RaiseOmen(
 			Received: true,
 			Reason:   "Omen was already received",
 		}, nil
+	}
+
+	if err := s.harbinger.BearOmen(ctx, receivedOmen); err != nil {
+		log.Printf(
+			"[PANOPTICON] Harbinger failed for Omen %s: %v",
+			receivedOmen.OmenID,
+			err,
+		)
 	}
 
 	log.Printf(
