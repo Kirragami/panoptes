@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -23,10 +24,12 @@ type EyeState struct {
 
 type PanoptesServer struct {
 	proto.UnimplementedPanoptesServiceServer
+	proto.UnimplementedPanopticonEdictServiceServer
 
-	mu        sync.Mutex
-	eyes      map[string]EyeState
-	chronicle *Chronicle
+	mu         sync.Mutex
+	eyes       map[string]EyeState
+	chronicle  *Chronicle
+	edictToken string
 }
 
 func (s *PanoptesServer) recordSight(eyeID string) {
@@ -95,7 +98,7 @@ func (s *PanoptesServer) BindEye(
 		}, nil
 	}
 
-	brand, err := s.admitBind(eyeID, req.GetSeal(), req.GetBrand()) 
+	brand, err := s.admitBind(eyeID, req.GetSeal(), req.GetBrand())
 	if err != nil {
 		log.Printf("[PANOPTICON] Bind refused for Eye %s: %v", eyeID, err)
 
@@ -209,9 +212,22 @@ func main() {
 		log.Fatalf("Panopticon could not raise its Aegis: %v", err)
 	}
 
+	edictToken := strings.TrimSpace(
+		os.Getenv("PANOPTICON_EDICT_TOKEN"),
+	)
+
+	if len(edictToken) < 32 {
+		log.Fatalf("PANOPTICON_EDICT_TOKEN must be at least 32 characters")
+	}
+
+	if edictToken == "" {
+		log.Fatalf("PANOPTICON_EDICT_TOKEN is required")
+	}
+
 	panoptesServer := &PanoptesServer{
-		eyes:      eyes,
-		chronicle: chronicle,
+		eyes:       eyes,
+		chronicle:  chronicle,
+		edictToken: edictToken,
 	}
 
 	go panoptesServer.watchForClosedEyes()
@@ -238,6 +254,10 @@ func main() {
 		grpc.Creds(aegis),
 	)
 	proto.RegisterPanoptesServiceServer(grpcServer, panoptesServer)
+	proto.RegisterPanopticonEdictServiceServer(
+		grpcServer,
+		panoptesServer,
+	)
 
 	fmt.Printf("Panopticon is watching on port %s...\n", port)
 
