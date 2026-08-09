@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option go_package = "github.com/Kirragami/panoptes/proto";
+
+package panoptes;
+
+service PanoptesOmenService {
+    rpc RaiseOmen(Omen) returns (OmenReceipt);
+}
+
+message Omen {
+    string omen_id = 1;
+
+    string eye_id = 2;
+    string brand = 3;
+
+    string gaze_sigil = 4;
+    uint64 gaze_turn = 5;
+
+    int64 befallen_at_unix = 6;
+}
+
+message OmenReceipt {
+    bool received = 1;
+    string reason = 2;
+}
