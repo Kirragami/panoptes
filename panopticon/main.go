@@ -169,14 +169,35 @@ func (s *PanoptesServer) KeepVigil(
 
 		s.recordSight(eyeID)
 
+		rememberedGazes, err := s.chronicle.RecallGazes(eyeID)
+		if err != nil {
+			log.Printf(
+				"[PANOPTICON] Failed to recall Gazes for Eye %s: %v",
+				eyeID,
+				err,
+			)
+
+			rememberedGazes = nil
+		}
+
+		gazes := make([]*proto.Gaze, 0, len(rememberedGazes))
+
+		for _, remembered := range rememberedGazes {
+			gazes = append(gazes, revealGaze(remembered))
+		} 
+		
 		log.Printf(
 			"[PANOPTICON] Vigil from Eye %s at %d",
 			eyeID,
 			pulse.GetSentAtUnix(),
 		)
 
+		// gaze configs will be send over vigil for now
+		// change it to instant send to eye in later versions kay? 
+		// not to mention the strain on db for this :'))
 		signal := &proto.PanopticonSignal{
 			Message: "Panopticon sees you, Eye " + eyeID,
+			Gazes:   gazes,
 		}
 
 		if err := stream.Send(signal); err != nil {
