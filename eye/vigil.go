@@ -16,6 +16,7 @@ func keepVigil(
 	ctx context.Context,
 	iris *Iris,
 	eyeID string,
+	registry *visions.Registry,
 ) error {
 	connection, err := grpc.NewClient(
 		"passthrough:///"+iris.PanopticonEndpoint,
@@ -40,6 +41,8 @@ func keepVigil(
 	pulseTicker := time.NewTicker(pulseInterval)
 	defer pulseTicker.Stop()
 
+	heededTurns := make(map[string]uint64)
+
 	for {
 		pulse := &proto.EyePulse{
 			EyeId:      eyeID,
@@ -55,6 +58,13 @@ func keepVigil(
 		if err != nil {
 			return fmt.Errorf("receive Panopticon signal: %w", err)
 		}
+
+		heedGazes(
+			ctx,
+			registry,
+			heededTurns,
+			signal.GetGazes(),
+		)
 
 		log.Printf("[EYE] %s", signal.GetMessage())
 
@@ -93,6 +103,7 @@ func maintainVigil(
 				context.Background(),
 				&iris,
 				eyeID,
+				registry,
 			)
 		}
 
