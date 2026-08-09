@@ -84,7 +84,7 @@ func (x *EyePulse) GetBrand() string {
 type PanopticonSignal struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	Gaze          *Gaze                  `protobuf:"bytes,2,opt,name=gaze,proto3" json:"gaze,omitempty"`
+	Gazes         []*Gaze                `protobuf:"bytes,2,rep,name=gazes,proto3" json:"gazes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -126,9 +126,9 @@ func (x *PanopticonSignal) GetMessage() string {
 	return ""
 }
 
-func (x *PanopticonSignal) GetGaze() *Gaze {
+func (x *PanopticonSignal) GetGazes() []*Gaze {
 	if x != nil {
-		return x.Gaze
+		return x.Gazes
 	}
 	return nil
 }
@@ -142,10 +142,10 @@ const file_vigil_proto_rawDesc = "" +
 	"\x06eye_id\x18\x01 \x01(\tR\x05eyeId\x12 \n" +
 	"\fsent_at_unix\x18\x02 \x01(\x03R\n" +
 	"sentAtUnix\x12\x14\n" +
-	"\x05brand\x18\x03 \x01(\tR\x05brand\"P\n" +
+	"\x05brand\x18\x03 \x01(\tR\x05brand\"R\n" +
 	"\x10PanopticonSignal\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage\x12\"\n" +
-	"\x04gaze\x18\x02 \x01(\v2\x0e.panoptes.GazeR\x04gazeB%Z#github.com/Kirragami/panoptes/protob\x06proto3"
+	"\amessage\x18\x01 \x01(\tR\amessage\x12$\n" +
+	"\x05gazes\x18\x02 \x03(\v2\x0e.panoptes.GazeR\x05gazesB%Z#github.com/Kirragami/panoptes/protob\x06proto3"
 
 var (
 	file_vigil_proto_rawDescOnce sync.Once
@@ -166,7 +166,7 @@ var file_vigil_proto_goTypes = []any{
 	(*Gaze)(nil),             // 2: panoptes.Gaze
 }
 var file_vigil_proto_depIdxs = []int32{
-	2, // 0: panoptes.PanopticonSignal.gaze:type_name -> panoptes.Gaze
+	2, // 0: panoptes.PanopticonSignal.gazes:type_name -> panoptes.Gaze
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name

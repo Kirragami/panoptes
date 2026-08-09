@@ -14,5 +14,5 @@ message EyePulse {
 
 message PanopticonSignal {
     string message = 1;
-    Gaze gaze = 2;
+    repeated Gaze gazes = 2;
 }
