@@ -539,7 +539,7 @@ func (c *Chronicle) RecallGazes(
 		}
 
 		focus := &structpb.Struct{}
-		if err :=protojson.Unmarshal(
+		if err := protojson.Unmarshal(
 			[]byte(focusJSON),
 			focus,
 		); err != nil {
@@ -565,6 +565,92 @@ func (c *Chronicle) RecallGazes(
 
 	return gazes, nil
 }
+
+func (c *Chronicle) RecallGaze(
+	eyeID string,
+	sigil string,
+) (GazeRecord, bool, error) {
+	eyeID = strings.TrimSpace(eyeID)
+	sigil = strings.TrimSpace(sigil)
+
+	if eyeID == "" {
+		return GazeRecord{}, false, fmt.Errorf(
+			"cannot recall Gaze for an empty Eye",
+		)
+	}
+
+	if sigil == "" {
+		return GazeRecord{}, false, fmt.Errorf(
+			"cannot recall a Gaze without Sigil",
+		)
+	}
+
+	var gaze GazeRecord
+	var turn int64
+	var awake int64
+	var form int64
+	var focusJSON string
+
+	err := c.db.QueryRow(
+		`SELECT
+			turn,
+			awake,
+			sight,
+			form,
+			focus_json
+		FROM eye_gazes
+		WHERE eye_id = ? AND sigil = ?`,
+		eyeID,
+		sigil,
+	).Scan(
+		&turn,
+		&awake,
+		&gaze.Sight,
+		&form,
+		&focusJSON,
+	)
+
+	if err == sql.ErrNoRows {
+		return GazeRecord{}, false, nil
+	}
+
+	if err != nil {
+		return GazeRecord{}, false, fmt.Errorf(
+			"recall Gaze %s: %w",
+			sigil,
+			err,
+		)
+	}
+
+	if turn < 1 || form < 1 {
+		return GazeRecord{}, false, fmt.Errorf(
+			"Gaze %s is malformed in Chronicle",
+			sigil,
+		)
+	}
+
+	focus := &structpb.Struct{}
+	if err := protojson.Unmarshal(
+		[]byte(focusJSON),
+		focus,
+	); err != nil {
+		return GazeRecord{}, false, fmt.Errorf(
+			"shape recalled Gaze %s focus: %w",
+			sigil,
+			err,
+		)
+	}
+
+	gaze.EyeID = eyeID
+	gaze.Sigil = sigil
+	gaze.Turn = uint64(turn)
+	gaze.Awake = awake != 0
+	gaze.Form = uint32(form)
+	gaze.Focus = focus
+
+	return gaze, true, nil
+}
+
 func (c *Chronicle) RecallVision(
 	eyeID string,
 	sight string,
