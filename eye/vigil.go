@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"time"
 
 	"github.com/Kirragami/panoptes/proto"
 	"github.com/Kirragami/panoptes/eye/visions"
-	"google.golang.org/grpc"
 )
 
 func keepVigil(
@@ -18,15 +16,9 @@ func keepVigil(
 	eyeID string,
 	registry *visions.Registry,
 ) error {
-	connection, err := grpc.NewClient(
-		"passthrough:///"+iris.PanopticonEndpoint,
-		grpc.WithTransportCredentials(openAegis(iris)),
-		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
-			return (&net.Dialer{}).DialContext(ctx, "tcp4", addr)
-		}),
-	)
+	connection, err := openPanopticon(iris)
 	if err != nil {
-		return fmt.Errorf("open Vigil connection to Panopticon: %w", err)
+		return err
 	}
 	defer connection.Close()
 
