@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/Kirragami/panoptes/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // lets just go with this design from start for better scalability teehee
@@ -13,6 +15,7 @@ type Vision interface {
 	Sight() string
 	Form() uint32
 	Behold(context.Context) (awake bool, slumberReason string, err error)
+	DiscernFocus(*structpb.Struct) error
 }
 
 type Registry struct {
@@ -72,4 +75,76 @@ func (r *Registry) BeholdAll(
 func (r *Registry) Recall(sight string) (Vision, bool) {
 	vision, exists := r.visions[sight]
 	return vision, exists
+}
+
+func (r *Registry) DiscernGaze(
+	ctx context.Context,
+	gaze *proto.Gaze,
+) error {
+	if gaze == nil {
+		return fmt.Errorf("received an empty Gaze")
+	}
+
+	sigil := strings.TrimSpace(gaze.GetSigil())
+	if sigil == "" {
+		return fmt.Errorf("Gaze has no Sigil")
+	}
+
+	if gaze.GetTurn() < 1 {
+		return fmt.Errorf(
+			"Gaze %s has an invalid turn",
+			sigil,
+		)
+	}
+
+	sight := strings.TrimSpace(gaze.GetVision())
+	if sight == "" {
+		return fmt.Errorf(
+			"Gaze %s has no Vision",
+			sigil,
+		)
+	}
+
+	vision, exists := r.Recall(sight)
+	if !exists {
+		return fmt.Errorf(
+			"Eye has not beheld Vision %s",
+			sight,
+		)
+	}
+
+	if vision.Form() != gaze.GetForm() {
+		return fmt.Errorf(
+			"Vision %s knows form %d, not form %d",
+			sight,
+			vision.Form(),
+			gaze.GetForm(),
+		)
+	}
+
+	awake, slumberReason, err := vision.Behold(ctx)
+	if err != nil {
+		return fmt.Errorf(
+			"behold Vision %s before Gaze: %w",
+			sight, err,
+		)
+	}
+
+	if gaze.GetAwake() && !awake {
+		return fmt.Errorf(
+			"Vision %s is slumbering: %s",
+			sight,
+			slumberReason,
+		)
+	}
+
+	if err := vision.DiscernFocus(gaze.GetFocus()); err != nil {
+		return fmt.Errorf(
+			"Gaze %s focus is unclear: %w",
+			sigil,
+			err,
+		)
+	}
+
+	return nil
 }
