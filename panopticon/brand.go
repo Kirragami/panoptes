@@ -37,3 +37,25 @@ func matchesBrand(brandHash, brand string) bool {
 		[]byte(providedHash),
 	) == 1
 }
+
+func (s *PanoptesServer) recognizeEye(
+	eyeID string,
+	brand string,
+) error {
+	eyeID = strings.TrimSpace(eyeID)
+
+	if eyeID == "" {
+		return fmt.Errorf("Eye has no identity")
+	}
+
+	brandHash, branded, err := s.chronicle.RecallBrandHash(eyeID)
+	if err != nil {
+		return fmt.Errorf("recall Eye Brand: %w", err)
+	}
+
+	if !branded || !matchesBrand(brandHash, brand) {
+		return fmt.Errorf("Eye does not carry a valid Brand")
+	}
+
+	return nil
+}
