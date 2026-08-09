@@ -12,7 +12,7 @@ service PanopticonEdictService {
 
 message BestowGazeRequest {
     string eye_id = 1;
-    string gaze = 2;
+    Gaze gaze = 2;
 }
 
 message BestowGazeResponse {

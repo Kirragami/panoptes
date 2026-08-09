@@ -24,7 +24,7 @@ const (
 type BestowGazeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EyeId         string                 `protobuf:"bytes,1,opt,name=eye_id,json=eyeId,proto3" json:"eye_id,omitempty"`
-	Gaze          string                 `protobuf:"bytes,2,opt,name=gaze,proto3" json:"gaze,omitempty"`
+	Gaze          *Gaze                  `protobuf:"bytes,2,opt,name=gaze,proto3" json:"gaze,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -66,11 +66,11 @@ func (x *BestowGazeRequest) GetEyeId() string {
 	return ""
 }
 
-func (x *BestowGazeRequest) GetGaze() string {
+func (x *BestowGazeRequest) GetGaze() *Gaze {
 	if x != nil {
 		return x.Gaze
 	}
-	return ""
+	return nil
 }
 
 type BestowGazeResponse struct {
@@ -137,10 +137,10 @@ var File_edict_proto protoreflect.FileDescriptor
 
 const file_edict_proto_rawDesc = "" +
 	"\n" +
-	"\vedict.proto\x12\bpanoptes\x1a\fmythos.proto\">\n" +
+	"\vedict.proto\x12\bpanoptes\x1a\fmythos.proto\"N\n" +
 	"\x11BestowGazeRequest\x12\x15\n" +
-	"\x06eye_id\x18\x01 \x01(\tR\x05eyeId\x12\x12\n" +
-	"\x04gaze\x18\x02 \x01(\tR\x04gaze\"y\n" +
+	"\x06eye_id\x18\x01 \x01(\tR\x05eyeId\x12\"\n" +
+	"\x04gaze\x18\x02 \x01(\v2\x0e.panoptes.GazeR\x04gaze\"y\n" +
 	"\x12BestowGazeResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12%\n" +
 	"\x0estatus_message\x18\x02 \x01(\tR\rstatusMessage\x12\"\n" +
@@ -168,14 +168,15 @@ var file_edict_proto_goTypes = []any{
 	(*Gaze)(nil),               // 2: panoptes.Gaze
 }
 var file_edict_proto_depIdxs = []int32{
-	2, // 0: panoptes.BestowGazeResponse.gaze:type_name -> panoptes.Gaze
-	0, // 1: panoptes.PanopticonEdictService.BestowGaze:input_type -> panoptes.BestowGazeRequest
-	1, // 2: panoptes.PanopticonEdictService.BestowGaze:output_type -> panoptes.BestowGazeResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	2, // 0: panoptes.BestowGazeRequest.gaze:type_name -> panoptes.Gaze
+	2, // 1: panoptes.BestowGazeResponse.gaze:type_name -> panoptes.Gaze
+	0, // 2: panoptes.PanopticonEdictService.BestowGaze:input_type -> panoptes.BestowGazeRequest
+	1, // 3: panoptes.PanopticonEdictService.BestowGaze:output_type -> panoptes.BestowGazeResponse
+	3, // [3:4] is the sub-list for method output_type
+	2, // [2:3] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_edict_proto_init() }
