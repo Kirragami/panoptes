@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/Kirragami/panoptes/proto"
 	"google.golang.org/grpc/codes"
@@ -81,6 +82,31 @@ func (s *PanoptesServer) RaiseOmen(
 		return &proto.OmenReceipt{
 			Received: false,
 			Reason:   "the Gaze is asleep",
+		}, nil
+	}
+
+	isNew, err := s.chronicle.ReceiveOmen(OmenRecord{
+		OmenID:     omen.GetOmenId(),
+		EyeID:      omen.GetEyeId(),
+		GazeSigil:  omen.GetGazeSigil(),
+		GazeTurn:   omen.GetGazeTurn(),
+		BefallenAt: time.Unix(
+			omen.GetBefallenAtUnix(),
+			0,
+		).UTC(),
+		ReceivedAt: time.Now().UTC(),
+	})
+	if err != nil {
+		return nil, status.Error(
+			codes.Internal,
+			"Panopticon could not receive the Omen",
+		)
+	}
+
+	if !isNew {
+		return &proto.OmenReceipt{
+			Received: true,
+			Reason:   "Omen was already received",
 		}, nil
 	}
 

@@ -41,6 +41,15 @@ type Chronicle struct {
 	db *sql.DB
 }
 
+type OmenRecord struct {
+	OmenID     string
+	EyeID      string
+	GazeSigil  string
+	GazeTurn   uint64
+	BefallenAt time.Time
+	ReceivedAt time.Time
+}
+
 func openChronicle(path string) (*Chronicle, error) {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
@@ -122,6 +131,21 @@ func openChronicle(path string) (*Chronicle, error) {
 	if err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("prepare Gaze Chronicles: %w", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS omens (
+			omen_id TEXT PRIMARY KEY,
+			eye_id TEXT NOT NULL,
+			gaze_sigil TEXT NOT NULL,
+			gaze_turn INTEGER NOT NULL,
+			befallen_at_unix INTEGER NOT NULL,
+			received_at_unix INTEGER NOT NULL
+		);
+	`)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("prepare Chronicle Omens: %w", err)
 	}
 
 	return &Chronicle{db: db}, nil
@@ -717,3 +741,66 @@ func (c *Chronicle) RecallVision(
 
 	return vision, true, nil
 }
+
+func (c *Chronicle) ReceiveOmen(
+	omen OmenRecord,
+) (bool, error) {
+	omen.OmenID = strings.TrimSpace(omen.OmenID)
+	omen.EyeID = strings.TrimSpace(omen.EyeID)
+	omen.GazeSigil = strings.TrimSpace(omen.GazeSigil)
+
+	if omen.OmenID == "" {
+		return false, fmt.Errorf("Omen has no identity")
+	}
+	if omen.EyeID == "" {
+		return false, fmt.Errorf("Omen has no Eye")
+	}
+	if omen.GazeSigil == "" {
+		return false, fmt.Errorf("Omen has no Gaze Sigil")
+	}
+	if omen.GazeTurn < 1 {
+		return false, fmt.Errorf("Omen has an invalid Gaze turn")
+	}
+	if omen.BefallenAt.IsZero() {
+		return false, fmt.Errorf("Omen has no time of befell")
+	}
+	if omen.ReceivedAt.IsZero() {
+		return false, fmt.Errorf("Omen has no received time")
+	}
+
+	result, err := c.db.Exec(
+		`INSERT INTO omens (
+			omen_id,
+			eye_id,
+			gaze_sigil,
+			gaze_turn,
+			befallen_at_unix,
+			received_at_unix
+		) VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT(omen_id) DO NOTHING`,
+		omen.OmenID,
+		omen.EyeID,
+		omen.GazeSigil,
+		omen.GazeTurn,
+		omen.BefallenAt.Unix(),
+		omen.ReceivedAt.Unix(),
+	)
+	if err != nil {
+		return false, fmt.Errorf(
+			"received Omen %s: %w",
+			omen.OmenID,
+			err,
+		)
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf(
+			"read Omen receipt: %w",
+			err,
+		)
+	}
+
+	return affected == 1, nil
+}
+
