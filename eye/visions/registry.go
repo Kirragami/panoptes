@@ -23,6 +23,25 @@ type Registry struct {
 	order   []string
 }
 
+type OmenRaiser func(
+	context.Context,
+	*proto.Gaze,
+) error
+
+type Vigil interface {
+	Sleep()
+}
+
+type GazingVision interface {
+	Vision
+
+	Awaken(
+		context.Context,
+		*proto.Gaze,
+		OmenRaiser,
+	) (Vigil, error)
+}
+
 func NewRegistry(entries ...Vision) (*Registry, error) {
 	registry := &Registry{
 		visions: make(map[string]Vision),

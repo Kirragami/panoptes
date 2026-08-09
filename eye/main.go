@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/Kirragami/panoptes/eye/visions"
+	"github.com/Kirragami/panoptes/eye/visions/dockerhealth"
 )
 
 func main() {
@@ -30,9 +31,9 @@ func main() {
 		iris.PanopticonEndpoint,
 	)
 
-	// new visions will need to be added here, for later version aight? 
+	// new visions will need to be added here, for later version aight?
 	registry, err := visions.NewRegistry(
-		visions.NewDockerHealth(""),
+		dockerhealth.New(""),
 	)
 	if err != nil {
 		log.Fatalf("Eye failed to acquire its Visions: %v", err)

@@ -14,7 +14,7 @@ func keepVigil(
 	ctx context.Context,
 	iris *Iris,
 	eyeID string,
-	registry *visions.Registry,
+	keeper *GazeKeeper,
 ) error {
 	connection, err := openPanopticon(iris)
 	if err != nil {
@@ -33,8 +33,6 @@ func keepVigil(
 	pulseTicker := time.NewTicker(pulseInterval)
 	defer pulseTicker.Stop()
 
-	heededTurns := make(map[string]uint64)
-
 	for {
 		pulse := &proto.EyePulse{
 			EyeId:      eyeID,
@@ -51,12 +49,7 @@ func keepVigil(
 			return fmt.Errorf("receive Panopticon signal: %w", err)
 		}
 
-		heedGazes(
-			ctx,
-			registry,
-			heededTurns,
-			signal.GetGazes(),
-		)
+		keeper.heed(ctx, signal.GetGazes())
 
 		log.Printf("[EYE] %s", signal.GetMessage())
 
@@ -76,6 +69,13 @@ func maintainVigil(
 	) {
 	retryDelay := time.Second
 	maxRetryDelay := 30 * time.Second
+	
+	keeper := newGazeKeeper(
+		&iris,
+		eyeID,
+		registry,
+	)
+	defer keeper.SleepAll()
 
 	for {
 		bindContext, cancelBind := context.WithTimeout(
@@ -95,7 +95,7 @@ func maintainVigil(
 				context.Background(),
 				&iris,
 				eyeID,
-				registry,
+				keeper,
 			)
 		}
 
