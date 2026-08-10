@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+option go_package = "github.com/Kirragami/panoptes/proto";
+
+package panoptes;
+
+service PanoptesOracleService {
+    rpc PairOracle(PairOracleRequest) returns (PairOracleResponse);
+    rpc RefreshOracleToken(RefreshOracleTokenRequest)
+        returns (RefreshOracleTokenResponse);
+}
+
+message PairOracleRequest {
+    string oracle_id = 1;
+    string oracle_seal = 2;
+    string fcm_token = 3;
+}
+
+message PairOracleResponse {
+    bool success = 1;
+    string status_message = 2;
+    string oracle_brand = 3;
+}
+
+message RefreshOracleTokenRequest {
+    string oracle_id = 1;
+    string oracle_brand = 2;
+    string fcm_token = 3;
+}
+
+message RefreshOracleTokenResponse {
+    bool success = 1;
+    string status_message = 2;
+}
