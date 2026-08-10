@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -19,29 +18,20 @@ type LogHarbinger struct{}
 
 func awakenHarbinger(
 	ctx context.Context,
+	chronicle *Chronicle,
 ) (Harbinger, error) {
 	credentialsPath := strings.TrimSpace(
 		os.Getenv("PANOPTICON_FIREBASE_CREDENTIALS"),
 	)
 
-	deviceToken := strings.TrimSpace(
-		os.Getenv("PANOPTICON_FCM_DEVICE_TOKEN"),
-	)
-
-	if credentialsPath == "" && deviceToken == "" {
+	if credentialsPath == "" {
 		return LogHarbinger{}, nil
-	}
-
-	if credentialsPath == "" || deviceToken == "" {
-		return nil, fmt.Errorf(
-			"PANOPTICON_FIREBASE_CREDENTIALS and PANOPTICON_FCM_DEVICE_TOKEN are required",
-		)
 	}
 
 	return NewFCMHarbinger(
 		ctx,
 		credentialsPath,
-		deviceToken,
+		chronicle,
 	)
 }
 

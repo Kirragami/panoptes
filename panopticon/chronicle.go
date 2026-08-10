@@ -988,7 +988,7 @@ func (c *Chronicle) RecallOracleBrandHash(
 		 FROM oracles
 		 WHERE oracle_id = ?
 		 	AND revoked_at_unix IS NULL`,
-			oracleID,
+		oracleID,
 	).Scan(&brandHash)
 
 	if err == sql.ErrNoRows {
@@ -1051,4 +1051,43 @@ func (c *Chronicle) RefreshOracleToken(
 	}
 
 	return nil
+}
+
+func (c *Chronicle) RecallOracleTokens() (
+	[]string,
+	error,
+) {
+	rows, err := c.db.Query(
+		`SELECT DISTINCT oracle_tokens.fcm_token
+		 FROM oracle_tokens
+		 INNER JOIN oracles
+			ON oracles.oracle_id = oracle_tokens.oracle_id
+		 WHERE oracles.revoked_at_unix IS NULL
+		 ORDER BY oracle_tokens.refreshed_at_unix DESC`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("recall Oracle tokens: %w", err)
+	}
+	defer rows.Close()
+
+	var tokens []string
+
+	for rows.Next() {
+		var token string
+
+		if err := rows.Scan(&token); err != nil {
+			return nil, fmt.Errorf("read Oracle token: %w", err)
+		}
+
+		token = strings.TrimSpace(token)
+		if token != "" {
+			tokens = append(tokens, token)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate Oracle tokens: %w", err)
+	}
+
+	return tokens, nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -13,24 +14,23 @@ import (
 
 // injecting tokens for now to test
 type FCMHarbinger struct {
-	messenger   *messaging.Client
-	deviceToken string
+	messenger *messaging.Client
+	chronicle *Chronicle
 }
 
 func NewFCMHarbinger(
 	ctx context.Context,
 	credentialsPath string,
-	deviceToken string,
+	chronicle *Chronicle,
 ) (*FCMHarbinger, error) {
 	credentialsPath = strings.TrimSpace(credentialsPath)
-	deviceToken = strings.TrimSpace(deviceToken)
 
 	if credentialsPath == "" {
 		return nil, fmt.Errorf("Firebase credentials path is required")
 	}
 
-	if deviceToken == "" {
-		return nil, fmt.Errorf("FCM Device Token is required")
+	if chronicle == nil {
+		return nil, fmt.Errorf("Chronicle could not be found")
 	}
 
 	app, err := firebase.NewApp(
@@ -48,8 +48,8 @@ func NewFCMHarbinger(
 	}
 
 	return &FCMHarbinger{
-		messenger:   messenger,
-		deviceToken: deviceToken,
+		messenger: messenger,
+		chronicle: chronicle,
 	}, nil
 }
 
@@ -57,27 +57,46 @@ func (h *FCMHarbinger) BearOmen(
 	ctx context.Context,
 	omen OmenRecord,
 ) error {
-	_, err := h.messenger.Send(
-		ctx,
-		&messaging.Message{
-			Token: h.deviceToken,
-			Data: map[string]string{
-				"omen_id": omen.OmenID,
-				"eye_id": omen.EyeID,
-				"gaze_sigil": omen.GazeSigil,
-				"gaze_turn": strconv.FormatUint(omen.GazeTurn, 10),
-				"befallen_at_unix": strconv.FormatInt(omen.BefallenAt.Unix(), 10),
-			},
-			Android: &messaging.AndroidConfig{
-				Priority: "high",
-			},
-		},
-	)
+	tokens, err := h.chronicle.RecallOracleTokens()
 	if err != nil {
+		return err
+	}
+
+	if len(tokens) == 0 {
+		return nil
+	}
+
+	var failures []error
+
+	for _, token := range tokens {
+		_, err := h.messenger.Send(
+			ctx,
+			&messaging.Message{
+				Token: token,
+				Data: map[string]string{
+					"omen_id":          omen.OmenID,
+					"eye_id":           omen.EyeID,
+					"gaze_sigil":       omen.GazeSigil,
+					"gaze_turn":        strconv.FormatUint(omen.GazeTurn, 10),
+					"befallen_at_unix": strconv.FormatInt(omen.BefallenAt.Unix(), 10),
+				},
+				Android: &messaging.AndroidConfig{
+					Priority: "high",
+				},
+			},
+		)
+		if err != nil {
+			failures = append(
+				failures,
+				fmt.Errorf("send to Oracle token: %w", err),
+			)
+		}
+	}
+
+	if len(failures) > 0 {
 		return fmt.Errorf(
-			"bear Omen %s through FCM: %w",
-			omen.OmenID,
-			err,
+			"bear Omen through FCM: %w",
+			errors.Join(failures...),
 		)
 	}
 

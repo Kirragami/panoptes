@@ -248,7 +248,10 @@ func main() {
 		log.Fatalf("PANOPTICON_EDICT_TOKEN is required")
 	}
 
-	harbinger, err := awakenHarbinger(context.Background())
+	harbinger, err := awakenHarbinger(
+		context.Background(),
+		chronicle,
+	)
 	if err != nil {
 		log.Fatalf("Panopticon could not awaken its Harbinger: %v", err)
 	}
@@ -257,7 +260,7 @@ func main() {
 		eyes:       eyes,
 		chronicle:  chronicle,
 		edictToken: edictToken,
-		harbinger: harbinger,
+		harbinger:  harbinger,
 	}
 
 	go panoptesServer.watchForClosedEyes()
