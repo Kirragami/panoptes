@@ -847,3 +847,208 @@ func (c *Chronicle) ReceiveOmen(
 
 	return affected == 1, nil
 }
+
+func (c *Chronicle) InscribeOracleSeal(
+	sealHash string,
+	createdAt time.Time,
+	expiresAt time.Time,
+) error {
+	_, err := c.db.Exec(
+		`INSERT INTO oracle_seals (
+			seal_hash,
+			created_at_unix,
+			expires_at_unix
+		) VALUES (?, ?, ?)`,
+		sealHash,
+		createdAt.Unix(),
+		expiresAt.Unix(),
+	)
+	if err != nil {
+		return fmt.Errorf("inscribe Oracle Seal: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Chronicle) PairOracle(
+	oracleID string,
+	sealHash string,
+	brandHash string,
+	fcmToken string,
+	pairedAt time.Time,
+) error {
+	oracleID = strings.TrimSpace(oracleID)
+	sealHash = strings.TrimSpace(sealHash)
+	brandHash = strings.TrimSpace(brandHash)
+	fcmToken = strings.TrimSpace(fcmToken)
+
+	if oracleID == "" {
+		return fmt.Errorf("Oracle has no identity")
+	}
+	if sealHash == "" {
+		return fmt.Errorf("Oracle pairing has no Seal")
+	}
+	if brandHash == "" {
+		return fmt.Errorf("Oracle pairing has no Brand")
+	}
+	if fcmToken == "" {
+		return fmt.Errorf("Oracle pairing has no FCM token")
+	}
+
+	tx, err := c.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin Oracle pairing: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	result, err := tx.Exec(
+		`UPDATE oracle_seals
+		 SET consumed_at_unix = ?, bound_oracle_id = ?
+		 WHERE seal_hash = ?
+		 	AND consumed_at_unix IS NULL
+			AND expires_at_unix >= ?`,
+		pairedAt.Unix(),
+		oracleID,
+		sealHash,
+		pairedAt.Unix(),
+	)
+	if err != nil {
+		return fmt.Errorf("consume Oracle Seal: %w", err)
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("read Oracle Seal receipt: %w", err)
+	}
+
+	if affected != 1 {
+		return fmt.Errorf("Oracle Seal is invalid, expired or already consumed")
+	}
+
+	_, err = tx.Exec(
+		`INSERT INTO oracles (
+			oracle_id,
+			brand_hash,
+			paired_at_unix,
+			revoked_at_unix
+		) VALUES (?, ?, ?, NULL)
+		ON CONFLICT(oracle_id) DO UPDATE SET
+			brand_hash = excluded.brand_hash,
+			paired_at_unix = excluded.paired_at_unix,
+			revoked_at_unix = NULL`,
+		oracleID,
+		brandHash,
+		pairedAt.Unix(),
+	)
+	if err != nil {
+		return fmt.Errorf("inscribe Oracle Brand: %w", err)
+	}
+
+	_, err = tx.Exec(
+		`INSERT INTO oracle_tokens (
+			oracle_id,
+			fcm_token,
+			refreshed_at_unix
+		) VALUES (?, ?, ?)
+		 ON CONFLICT(oracle_id) DO UPDATE SET
+		 	fcm_token = excluded.fcm_token,
+			refreshed_at_unix = excluded.refreshed_at_unix`,
+		oracleID,
+		fcmToken,
+		pairedAt.Unix(),
+	)
+	if err != nil {
+		return fmt.Errorf("bind Oracle FCM Token: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit Oracle pairing: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Chronicle) RecallOracleBrandHash(
+	oracleID string,
+) (string, bool, error) {
+	oracleID = strings.TrimSpace(oracleID)
+
+	if oracleID == "" {
+		return "", false, fmt.Errorf(
+			"cannot recall Brand for an empty Oracle",
+		)
+	}
+
+	var brandHash string
+
+	err := c.db.QueryRow(
+		`SELECT brand_hash
+		 FROM oracles
+		 WHERE oracle_id = ?
+		 	AND revoked_at_unix IS NULL`,
+			oracleID,
+	).Scan(&brandHash)
+
+	if err == sql.ErrNoRows {
+		return "", false, nil
+	}
+
+	if err != nil {
+		return "", false, fmt.Errorf(
+			"recall Oracle Brand: %w",
+			err,
+		)
+	}
+
+	return brandHash, true, nil
+}
+
+func (c *Chronicle) RefreshOracleToken(
+	oracleID string,
+	fcmToken string,
+	refreshedAt time.Time,
+) error {
+	oracleID = strings.TrimSpace(oracleID)
+	fcmToken = strings.TrimSpace(fcmToken)
+
+	if oracleID == "" {
+		return fmt.Errorf("Oracle has no identity")
+	}
+
+	if fcmToken == "" {
+		return fmt.Errorf("Oracle has no FCM Token")
+	}
+
+	result, err := c.db.Exec(
+		`UPDATE oracle_tokens
+		 	SET fcm_token = ?,
+				refreshed_at_unix = ?
+			WHERE oracle_id = ?
+				AND EXISTS (
+					SELECT 1
+					FROM oracles
+					WHERE oracle_id = ?
+						AND revoked_at_unix IS NULL
+				)`,
+		fcmToken,
+		refreshedAt.Unix(),
+		oracleID,
+		oracleID,
+	)
+	if err != nil {
+		return fmt.Errorf("refresh Oracle FCM Token: %w", err)
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("read Oracle token refresh: %w", err)
+	}
+
+	if affected != 1 {
+		return fmt.Errorf("Oracle is unknown or revoked")
+	}
+
+	return nil
+}
