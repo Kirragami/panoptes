@@ -8,6 +8,7 @@ import "mythos.proto";
 
 service PanopticonEdictService {
     rpc BestowGaze(BestowGazeRequest) returns (BestowGazeResponse);
+    rpc ForgeOracleSeal(ForgeOracleSealRequest) returns (ForgeOracleSealResponse);
 }
 
 message BestowGazeRequest {
@@ -19,4 +20,13 @@ message BestowGazeResponse {
     bool success = 1;
     string status_message = 2;
     Gaze gaze = 3;
+}
+
+message ForgeOracleSealRequest {}
+
+message ForgeOracleSealResponse {
+    bool success = 1;
+    string status_message = 2;
+    string oracle_seal = 3;
+    int64 expires_at_unix = 4;
 }

@@ -133,6 +133,110 @@ func (x *BestowGazeResponse) GetGaze() *Gaze {
 	return nil
 }
 
+type ForgeOracleSealRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ForgeOracleSealRequest) Reset() {
+	*x = ForgeOracleSealRequest{}
+	mi := &file_edict_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ForgeOracleSealRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ForgeOracleSealRequest) ProtoMessage() {}
+
+func (x *ForgeOracleSealRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_edict_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ForgeOracleSealRequest.ProtoReflect.Descriptor instead.
+func (*ForgeOracleSealRequest) Descriptor() ([]byte, []int) {
+	return file_edict_proto_rawDescGZIP(), []int{2}
+}
+
+type ForgeOracleSealResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	StatusMessage string                 `protobuf:"bytes,2,opt,name=status_message,json=statusMessage,proto3" json:"status_message,omitempty"`
+	OracleSeal    string                 `protobuf:"bytes,3,opt,name=oracle_seal,json=oracleSeal,proto3" json:"oracle_seal,omitempty"`
+	ExpiresAtUnix int64                  `protobuf:"varint,4,opt,name=expires_at_unix,json=expiresAtUnix,proto3" json:"expires_at_unix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ForgeOracleSealResponse) Reset() {
+	*x = ForgeOracleSealResponse{}
+	mi := &file_edict_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ForgeOracleSealResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ForgeOracleSealResponse) ProtoMessage() {}
+
+func (x *ForgeOracleSealResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_edict_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ForgeOracleSealResponse.ProtoReflect.Descriptor instead.
+func (*ForgeOracleSealResponse) Descriptor() ([]byte, []int) {
+	return file_edict_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ForgeOracleSealResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *ForgeOracleSealResponse) GetStatusMessage() string {
+	if x != nil {
+		return x.StatusMessage
+	}
+	return ""
+}
+
+func (x *ForgeOracleSealResponse) GetOracleSeal() string {
+	if x != nil {
+		return x.OracleSeal
+	}
+	return ""
+}
+
+func (x *ForgeOracleSealResponse) GetExpiresAtUnix() int64 {
+	if x != nil {
+		return x.ExpiresAtUnix
+	}
+	return 0
+}
+
 var File_edict_proto protoreflect.FileDescriptor
 
 const file_edict_proto_rawDesc = "" +
@@ -144,10 +248,18 @@ const file_edict_proto_rawDesc = "" +
 	"\x12BestowGazeResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12%\n" +
 	"\x0estatus_message\x18\x02 \x01(\tR\rstatusMessage\x12\"\n" +
-	"\x04gaze\x18\x03 \x01(\v2\x0e.panoptes.GazeR\x04gaze2a\n" +
+	"\x04gaze\x18\x03 \x01(\v2\x0e.panoptes.GazeR\x04gaze\"\x18\n" +
+	"\x16ForgeOracleSealRequest\"\xa3\x01\n" +
+	"\x17ForgeOracleSealResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12%\n" +
+	"\x0estatus_message\x18\x02 \x01(\tR\rstatusMessage\x12\x1f\n" +
+	"\voracle_seal\x18\x03 \x01(\tR\n" +
+	"oracleSeal\x12&\n" +
+	"\x0fexpires_at_unix\x18\x04 \x01(\x03R\rexpiresAtUnix2\xb9\x01\n" +
 	"\x16PanopticonEdictService\x12G\n" +
 	"\n" +
-	"BestowGaze\x12\x1b.panoptes.BestowGazeRequest\x1a\x1c.panoptes.BestowGazeResponseB%Z#github.com/Kirragami/panoptes/protob\x06proto3"
+	"BestowGaze\x12\x1b.panoptes.BestowGazeRequest\x1a\x1c.panoptes.BestowGazeResponse\x12V\n" +
+	"\x0fForgeOracleSeal\x12 .panoptes.ForgeOracleSealRequest\x1a!.panoptes.ForgeOracleSealResponseB%Z#github.com/Kirragami/panoptes/protob\x06proto3"
 
 var (
 	file_edict_proto_rawDescOnce sync.Once
@@ -161,19 +273,23 @@ func file_edict_proto_rawDescGZIP() []byte {
 	return file_edict_proto_rawDescData
 }
 
-var file_edict_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_edict_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_edict_proto_goTypes = []any{
-	(*BestowGazeRequest)(nil),  // 0: panoptes.BestowGazeRequest
-	(*BestowGazeResponse)(nil), // 1: panoptes.BestowGazeResponse
-	(*Gaze)(nil),               // 2: panoptes.Gaze
+	(*BestowGazeRequest)(nil),       // 0: panoptes.BestowGazeRequest
+	(*BestowGazeResponse)(nil),      // 1: panoptes.BestowGazeResponse
+	(*ForgeOracleSealRequest)(nil),  // 2: panoptes.ForgeOracleSealRequest
+	(*ForgeOracleSealResponse)(nil), // 3: panoptes.ForgeOracleSealResponse
+	(*Gaze)(nil),                    // 4: panoptes.Gaze
 }
 var file_edict_proto_depIdxs = []int32{
-	2, // 0: panoptes.BestowGazeRequest.gaze:type_name -> panoptes.Gaze
-	2, // 1: panoptes.BestowGazeResponse.gaze:type_name -> panoptes.Gaze
+	4, // 0: panoptes.BestowGazeRequest.gaze:type_name -> panoptes.Gaze
+	4, // 1: panoptes.BestowGazeResponse.gaze:type_name -> panoptes.Gaze
 	0, // 2: panoptes.PanopticonEdictService.BestowGaze:input_type -> panoptes.BestowGazeRequest
-	1, // 3: panoptes.PanopticonEdictService.BestowGaze:output_type -> panoptes.BestowGazeResponse
-	3, // [3:4] is the sub-list for method output_type
-	2, // [2:3] is the sub-list for method input_type
+	2, // 3: panoptes.PanopticonEdictService.ForgeOracleSeal:input_type -> panoptes.ForgeOracleSealRequest
+	1, // 4: panoptes.PanopticonEdictService.BestowGaze:output_type -> panoptes.BestowGazeResponse
+	3, // 5: panoptes.PanopticonEdictService.ForgeOracleSeal:output_type -> panoptes.ForgeOracleSealResponse
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name
@@ -191,7 +307,7 @@ func file_edict_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_edict_proto_rawDesc), len(file_edict_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

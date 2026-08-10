@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PanopticonEdictService_BestowGaze_FullMethodName = "/panoptes.PanopticonEdictService/BestowGaze"
+	PanopticonEdictService_BestowGaze_FullMethodName      = "/panoptes.PanopticonEdictService/BestowGaze"
+	PanopticonEdictService_ForgeOracleSeal_FullMethodName = "/panoptes.PanopticonEdictService/ForgeOracleSeal"
 )
 
 // PanopticonEdictServiceClient is the client API for PanopticonEdictService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PanopticonEdictServiceClient interface {
 	BestowGaze(ctx context.Context, in *BestowGazeRequest, opts ...grpc.CallOption) (*BestowGazeResponse, error)
+	ForgeOracleSeal(ctx context.Context, in *ForgeOracleSealRequest, opts ...grpc.CallOption) (*ForgeOracleSealResponse, error)
 }
 
 type panopticonEdictServiceClient struct {
@@ -47,11 +49,22 @@ func (c *panopticonEdictServiceClient) BestowGaze(ctx context.Context, in *Besto
 	return out, nil
 }
 
+func (c *panopticonEdictServiceClient) ForgeOracleSeal(ctx context.Context, in *ForgeOracleSealRequest, opts ...grpc.CallOption) (*ForgeOracleSealResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ForgeOracleSealResponse)
+	err := c.cc.Invoke(ctx, PanopticonEdictService_ForgeOracleSeal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PanopticonEdictServiceServer is the server API for PanopticonEdictService service.
 // All implementations must embed UnimplementedPanopticonEdictServiceServer
 // for forward compatibility.
 type PanopticonEdictServiceServer interface {
 	BestowGaze(context.Context, *BestowGazeRequest) (*BestowGazeResponse, error)
+	ForgeOracleSeal(context.Context, *ForgeOracleSealRequest) (*ForgeOracleSealResponse, error)
 	mustEmbedUnimplementedPanopticonEdictServiceServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedPanopticonEdictServiceServer struct{}
 
 func (UnimplementedPanopticonEdictServiceServer) BestowGaze(context.Context, *BestowGazeRequest) (*BestowGazeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BestowGaze not implemented")
+}
+func (UnimplementedPanopticonEdictServiceServer) ForgeOracleSeal(context.Context, *ForgeOracleSealRequest) (*ForgeOracleSealResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ForgeOracleSeal not implemented")
 }
 func (UnimplementedPanopticonEdictServiceServer) mustEmbedUnimplementedPanopticonEdictServiceServer() {
 }
@@ -105,6 +121,24 @@ func _PanopticonEdictService_BestowGaze_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PanopticonEdictService_ForgeOracleSeal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ForgeOracleSealRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PanopticonEdictServiceServer).ForgeOracleSeal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PanopticonEdictService_ForgeOracleSeal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PanopticonEdictServiceServer).ForgeOracleSeal(ctx, req.(*ForgeOracleSealRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PanopticonEdictService_ServiceDesc is the grpc.ServiceDesc for PanopticonEdictService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -115,6 +149,10 @@ var PanopticonEdictService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BestowGaze",
 			Handler:    _PanopticonEdictService_BestowGaze_Handler,
+		},
+		{
+			MethodName: "ForgeOracleSeal",
+			Handler:    _PanopticonEdictService_ForgeOracleSeal_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

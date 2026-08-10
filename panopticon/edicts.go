@@ -107,3 +107,27 @@ func (s *PanoptesServer) BestowGaze(
 		Gaze:          revealGaze(bestowed),
 	}, nil
 }
+
+func (s *PanoptesServer) ForgeOracleSeal(
+	ctx context.Context,
+	_ *proto.ForgeOracleSealRequest,
+) (*proto.ForgeOracleSealResponse, error) {
+	if err := s.authenticateEdict(ctx); err != nil {
+		return nil, err
+	}
+
+	seal, expiresAt, err := s.issueOracleSeal()
+	if err != nil {
+		return &proto.ForgeOracleSealResponse{
+			Success:       false,
+			StatusMessage: err.Error(),
+		}, nil
+	}
+
+	return &proto.ForgeOracleSealResponse{
+		Success:       true,
+		StatusMessage: "Oracle Seal forged",
+		OracleSeal:    seal,
+		ExpiresAtUnix: expiresAt.Unix(),
+	}, nil
+}

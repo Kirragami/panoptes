@@ -26,6 +26,7 @@ type PanoptesServer struct {
 	proto.UnimplementedPanoptesServiceServer
 	proto.UnimplementedPanopticonEdictServiceServer
 	proto.UnimplementedPanoptesOmenServiceServer
+	proto.UnimplementedPanoptesOracleServiceServer
 
 	mu         sync.Mutex
 	eyes       map[string]EyeState
@@ -288,6 +289,10 @@ func main() {
 		panoptesServer,
 	)
 	proto.RegisterPanoptesOmenServiceServer(
+		grpcServer,
+		panoptesServer,
+	)
+	proto.RegisterPanoptesOracleServiceServer(
 		grpcServer,
 		panoptesServer,
 	)
