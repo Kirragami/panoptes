@@ -265,17 +265,10 @@ func main() {
 
 	go panoptesServer.watchForClosedEyes()
 
-	// this is a mint for testing purposes, dont forget to remove mkayy?? :))
-	seal, expiresAt, err := panoptesServer.issueSeal()
+	err = startControlPanel(panoptesServer)
 	if err != nil {
-		log.Fatalf("Panopticon could not issue a test Seal: %v", err)
+		log.Fatalf("Panopticon could not start its control panel: %v", err)
 	}
-
-	log.Printf(
-		"[PANOPTICON] Test Seal minted (expires %s): %s",
-		expiresAt.Format(time.RFC3339),
-		seal,
-	)
 
 	port := ":50051"
 	lis, err := net.Listen("tcp", port)

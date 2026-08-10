@@ -51,8 +51,9 @@ type OmenRecord struct {
 }
 
 type OracleRecord struct {
-	OracleID string
-	PairedAt time.Time
+	OracleID  string
+	PairedAt  time.Time
+	RevokedAt *time.Time
 }
 
 func openChronicle(path string) (*Chronicle, error) {
@@ -288,6 +289,77 @@ func (c *Chronicle) RecallSightings() ([]Sighting, error) {
 	}
 
 	return sightings, nil
+}
+
+func (c *Chronicle) RecallSightingsPage(
+	query string,
+	limit int,
+	offset int,
+) ([]Sighting, int, error) {
+	query = strings.TrimSpace(query)
+	if len(query) > 256 {
+		return nil, 0, fmt.Errorf("Eye search query is too long")
+	}
+	if limit < 1 || limit > 100 {
+		return nil, 0, fmt.Errorf("Eye page limit must be between 1 and 100")
+	}
+	if offset < 0 {
+		return nil, 0, fmt.Errorf("Eye page offset cannot be negative")
+	}
+
+	whereClause := ""
+	var queryArguments []any
+	if query != "" {
+		whereClause = " WHERE eye_id LIKE ?"
+		queryArguments = append(queryArguments, "%"+query+"%")
+	}
+
+	var total int
+	countStatement := "SELECT COUNT(*) FROM sightings" + whereClause
+	if err := c.db.QueryRow(
+		countStatement,
+		queryArguments...,
+	).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count sightings: %w", err)
+	}
+
+	arguments := append([]any{}, queryArguments...)
+	arguments = append(arguments, limit, offset)
+	rows, err := c.db.Query(
+		`SELECT eye_id, first_seen_unix, last_seen_unix
+		 FROM sightings`+whereClause+`
+		 ORDER BY last_seen_unix DESC, eye_id ASC
+		 LIMIT ? OFFSET ?`,
+		arguments...,
+	)
+	if err != nil {
+		return nil, 0, fmt.Errorf("recall sighting page: %w", err)
+	}
+	defer rows.Close()
+
+	var sightings []Sighting
+	for rows.Next() {
+		var sighting Sighting
+		var firstSeenUnix, lastSeenUnix int64
+
+		if err := rows.Scan(
+			&sighting.EyeID,
+			&firstSeenUnix,
+			&lastSeenUnix,
+		); err != nil {
+			return nil, 0, fmt.Errorf("read sighting: %w", err)
+		}
+
+		sighting.FirstSeen = time.Unix(firstSeenUnix, 0).UTC()
+		sighting.LastSeen = time.Unix(lastSeenUnix, 0).UTC()
+		sightings = append(sightings, sighting)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterate sighting page: %w", err)
+	}
+
+	return sightings, total, nil
 }
 
 func (c *Chronicle) InscribeSeal(sealHash string, createdAt, expiresAt time.Time) error {
@@ -719,6 +791,70 @@ func (c *Chronicle) RecallGaze(
 	return gaze, true, nil
 }
 
+func (c *Chronicle) RecallVisions(
+	eyeID string,
+) ([]VisionRecord, error) {
+	eyeID = strings.TrimSpace(eyeID)
+
+	if eyeID == "" {
+		return nil, fmt.Errorf("cannot recall Visions for an empty Eye")
+	}
+
+	rows, err := c.db.Query(
+		`SELECT
+			sight,
+			form,
+			awake,
+			slumber_reason,
+			beheld_at_unix
+		FROM eye_visions
+		WHERE eye_id = ?
+		ORDER BY sight ASC`,
+		eyeID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("recall Visions: %w", err)
+	}
+	defer rows.Close()
+
+	var visions []VisionRecord
+
+	for rows.Next() {
+		var vision VisionRecord
+		var form int64
+		var awake int64
+		var beheldAtUnix int64
+
+		if err := rows.Scan(
+			&vision.Sight,
+			&form,
+			&awake,
+			&vision.SlumberReason,
+			&beheldAtUnix,
+		); err != nil {
+			return nil, fmt.Errorf("read Vision: %w", err)
+		}
+
+		if form < 1 {
+			return nil, fmt.Errorf(
+				"Vision %s has an invalid form",
+				vision.Sight,
+			)
+		}
+
+		vision.Form = uint32(form)
+		vision.Awake = awake != 0
+		vision.BeheldAt = time.Unix(beheldAtUnix, 0).UTC()
+		visions = append(visions, vision)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate Visions: %w", err)
+	}
+
+	return visions, nil
+}
+
 func (c *Chronicle) RecallVision(
 	eyeID string,
 	sight string,
@@ -848,6 +984,69 @@ func (c *Chronicle) ReceiveOmen(
 	return affected == 1, nil
 }
 
+func (c *Chronicle) RecallRecentOmens(
+	limit int,
+) ([]OmenRecord, error) {
+	if limit < 1 || limit > 100 {
+		return nil, fmt.Errorf("Omen recall limit must be between 1 and 100")
+	}
+
+	rows, err := c.db.Query(
+		`SELECT
+			omen_id,
+			eye_id,
+			gaze_sigil,
+			gaze_turn,
+			befallen_at_unix,
+			received_at_unix
+		FROM omens
+		ORDER BY received_at_unix DESC
+		LIMIT ?`,
+		limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("recall recent Omens: %w", err)
+	}
+	defer rows.Close()
+
+	var omens []OmenRecord
+	for rows.Next() {
+		var omen OmenRecord
+		var gazeTurn int64
+		var befallenAtUnix int64
+		var receivedAtUnix int64
+
+		if err := rows.Scan(
+			&omen.OmenID,
+			&omen.EyeID,
+			&omen.GazeSigil,
+			&gazeTurn,
+			&befallenAtUnix,
+			&receivedAtUnix,
+		); err != nil {
+			return nil, fmt.Errorf("read Omen: %w", err)
+		}
+
+		if gazeTurn < 1 {
+			return nil, fmt.Errorf(
+				"Omen %s has an invalid Gaze turn",
+				omen.OmenID,
+			)
+		}
+
+		omen.GazeTurn = uint64(gazeTurn)
+		omen.BefallenAt = time.Unix(befallenAtUnix, 0).UTC()
+		omen.ReceivedAt = time.Unix(receivedAtUnix, 0).UTC()
+		omens = append(omens, omen)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate Omens: %w", err)
+	}
+
+	return omens, nil
+}
+
 func (c *Chronicle) InscribeOracleSeal(
 	sealHash string,
 	createdAt time.Time,
@@ -968,6 +1167,50 @@ func (c *Chronicle) PairOracle(
 	}
 
 	return nil
+}
+
+func (c *Chronicle) RecallOracles() ([]OracleRecord, error) {
+	rows, err := c.db.Query(
+		`SELECT
+			oracle_id,
+			paired_at_unix,
+			revoked_at_unix
+		FROM oracles
+		ORDER BY paired_at_unix DESC`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("recall Oracles: %w", err)
+	}
+	defer rows.Close()
+
+	var oracles []OracleRecord
+	for rows.Next() {
+		var oracle OracleRecord
+		var pairedAtUnix int64
+		var revokedAtUnix sql.NullInt64
+
+		if err := rows.Scan(
+			&oracle.OracleID,
+			&pairedAtUnix,
+			&revokedAtUnix,
+		); err != nil {
+			return nil, fmt.Errorf("read Oracle: %w", err)
+		}
+
+		oracle.PairedAt = time.Unix(pairedAtUnix, 0).UTC()
+		if revokedAtUnix.Valid {
+			revokedAt := time.Unix(revokedAtUnix.Int64, 0).UTC()
+			oracle.RevokedAt = &revokedAt
+		}
+
+		oracles = append(oracles, oracle)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate Oracles: %w", err)
+	}
+
+	return oracles, nil
 }
 
 func (c *Chronicle) RecallOracleBrandHash(
