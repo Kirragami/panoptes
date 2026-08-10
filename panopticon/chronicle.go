@@ -50,6 +50,11 @@ type OmenRecord struct {
 	ReceivedAt time.Time
 }
 
+type OracleRecord struct {
+	OracleID string
+	PairedAt time.Time
+}
+
 func openChronicle(path string) (*Chronicle, error) {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
@@ -146,6 +151,45 @@ func openChronicle(path string) (*Chronicle, error) {
 	if err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("prepare Chronicle Omens: %w", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS oracle_seals (
+			seal_hash TEXT PRIMARY KEY,
+			created_at_unix INTEGER NOT NULL,
+			expires_at_unix INTEGER NOT NULL,
+			consumed_at_unix INTEGER,
+			bound_oracle_id TEXT
+		);
+	`)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("prepare Chronicle Oracle Seals: %w", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS oracles (
+			oracle_id TEXT PRIMARY KEY,
+			brand_hash TEXT NOT NULL,
+			paired_at_unix INTEGER NOT NULL,
+			revoked_at_unix INTEGER
+		);
+	`)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("prepare Chronicle Oracles: %w", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS oracle_tokens (
+			oracle_id TEXT PRIMARY KEY,
+			fcm_token TEXT NOT NULL,
+			refreshed_at_unix INTEGER NOT NULL
+		);
+	`)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("prepare Chronicle Oracle Tokens: %w", err)
 	}
 
 	return &Chronicle{db: db}, nil
@@ -803,4 +847,3 @@ func (c *Chronicle) ReceiveOmen(
 
 	return affected == 1, nil
 }
-
