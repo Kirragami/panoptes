@@ -56,6 +56,13 @@ type OracleRecord struct {
 	RevokedAt *time.Time
 }
 
+type SealRecord struct {
+	Kind       string
+	ForgedAt   time.Time
+	ExpiresAt  time.Time
+	ConsumedAt *time.Time
+}
+
 func openChronicle(path string) (*Chronicle, error) {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
@@ -375,6 +382,68 @@ func (c *Chronicle) InscribeSeal(sealHash string, createdAt, expiresAt time.Time
 	}
 
 	return nil
+}
+
+func (c *Chronicle) RecallSeals() ([]SealRecord, error) {
+	rows, err := c.db.Query(
+		`SELECT
+			kind,
+			forged_at_unix,
+			expires_at_unix,
+			consumed_at_unix
+		FROM (
+			SELECT
+				'Eye' AS kind,
+				created_at_unix AS forged_at_unix,
+				expires_at_unix,
+				consumed_at_unix
+			FROM seals
+			UNION ALL
+			SELECT
+				'Oracle' AS kind,
+				created_at_unix AS forged_at_unix,
+				expires_at_unix,
+				consumed_at_unix
+			FROM oracle_seals
+		)
+		ORDER BY forged_at_unix DESC, kind ASC`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("recall Seals: %w", err)
+	}
+	defer rows.Close()
+
+	var seals []SealRecord
+	for rows.Next() {
+		var seal SealRecord
+		var forgedAtUnix int64
+		var expiresAtUnix int64
+		var consumedAtUnix sql.NullInt64
+
+		if err := rows.Scan(
+			&seal.Kind,
+			&forgedAtUnix,
+			&expiresAtUnix,
+			&consumedAtUnix,
+		); err != nil {
+			return nil, fmt.Errorf("read Seal: %w", err)
+		}
+
+		seal.ForgedAt = time.Unix(forgedAtUnix, 0).UTC()
+		seal.ExpiresAt = time.Unix(expiresAtUnix, 0).UTC()
+		if consumedAtUnix.Valid {
+			consumedAt := time.Unix(consumedAtUnix.Int64, 0).UTC()
+			seal.ConsumedAt = &consumedAt
+		}
+
+		seals = append(seals, seal)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate Seals: %w", err)
+	}
+
+	return seals, nil
 }
 
 func (c *Chronicle) RecallBrandHash(eyeID string) (string, bool, error) {

@@ -17,6 +17,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const panopticonGRPCPort = "50051"
+
 type EyeState struct {
 	LastSeen time.Time
 	Online   bool
@@ -270,7 +272,7 @@ func main() {
 		log.Fatalf("Panopticon could not start its control panel: %v", err)
 	}
 
-	port := ":50051"
+	port := ":" + panopticonGRPCPort
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("Panopticon failed to wake up: %v", err)

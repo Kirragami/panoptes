@@ -90,6 +90,14 @@ const panelTemplateSource = `
 				Eyes
 			</button>
 		</form>
+		<form action="/panel/seals" method="get">
+			<button
+				type="submit"
+				class="nav-button {{if eq .CurrentTab "seals"}}is-active{{end}}"
+			>
+				Seals
+			</button>
+		</form>
 		<form action="/panel/oracles" method="get">
 			<button
 				type="submit"
@@ -458,8 +466,8 @@ const panelTemplateSource = `
 				<div>
 					<h1>Oracles</h1>
 				</div>
-				<form action="/panel/oracle-seal" method="get">
-					<button type="submit" class="button-wide">Pair Oracle</button>
+				<form action="/panel/seals" method="get">
+					<button type="submit" class="button-wide">Seals</button>
 				</form>
 			</header>
 
@@ -549,7 +557,7 @@ const panelTemplateSource = `
 </html>
 {{end}}
 
-{{define "oracle-seal"}}
+{{define "seals"}}
 <!doctype html>
 <html lang="en">
 {{template "head" .}}
@@ -557,37 +565,186 @@ const panelTemplateSource = `
 	<div class="app-shell">
 		{{template "sidebar" .}}
 		<main class="workspace">
-			<header class="page-header page-header-detail">
+			<header class="page-header">
 				<div>
-					<p class="page-kicker">Oracles</p>
-					<h1>Pair a mobile Oracle</h1>
+					<h1>Seals</h1>
 				</div>
-				<form action="/panel/oracles" method="get">
-					<button type="submit" class="button-secondary">All Oracles</button>
-				</form>
 			</header>
 
-			<section class="data-section pairing-section">
-				<form
-					action="/panel/oracle-seal"
-					method="post"
-					hx-post="/panel/oracle-seal"
-					hx-target="#seal-result"
-					hx-swap="innerHTML"
-				>
-					<input type="hidden" name="csrf" value="{{.CSRF}}">
-					<button type="submit" name="confirm" value="forge" class="button-wide">
-						Generate pairing Seal
-					</button>
-				</form>
-				<div id="seal-result" aria-live="polite">
-					{{template "oracle-seal-result" .}}
-				</div>
-			</section>
+			{{template "seals-content" .}}
 		</main>
 	</div>
 </body>
 </html>
+{{end}}
+
+{{define "seals-content"}}
+<div id="seals-content">
+	<section class="seals-section">
+		<article class="seal-card seal-card-eye">
+			<div class="seal-card-main">
+				<svg class="seal-type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+					<path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/>
+					<circle cx="12" cy="12" r="2.5"/>
+				</svg>
+				<h2>Eye</h2>
+				<form
+					class="seal-form"
+					action="/panel/seals/eye"
+					method="post"
+					hx-post="/panel/seals/eye"
+					hx-target="#eye-seal-result"
+					hx-swap="innerHTML"
+				>
+					<input type="hidden" name="csrf" value="{{.CSRF}}">
+					<button type="submit" name="confirm" value="forge" class="button-wide">
+						Forge
+					</button>
+				</form>
+				<div id="eye-seal-result" class="seal-result" aria-live="polite">
+					{{template "eye-seal-result" .Eye}}
+				</div>
+			</div>
+		</article>
+
+		<article class="seal-card seal-card-oracle">
+			<div class="seal-card-main">
+				<svg class="seal-type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+					<rect x="5.5" y="2.5" width="13" height="19" rx="2"/>
+					<path d="M9.5 5.5h5"/>
+					<circle cx="12" cy="18.5" r=".75" fill="currentColor" stroke="none"/>
+				</svg>
+				<h2>Oracle</h2>
+				<form
+					class="seal-form"
+					action="/panel/seals/oracle"
+					method="post"
+					hx-post="/panel/seals/oracle"
+					hx-target="#oracle-seal-result"
+					hx-swap="innerHTML"
+				>
+					<input type="hidden" name="csrf" value="{{.CSRF}}">
+					<button type="submit" name="confirm" value="forge" class="button-wide">
+						Forge
+					</button>
+				</form>
+			</div>
+			<div id="oracle-seal-result" class="seal-result" aria-live="polite">
+				{{template "oracle-seal-result" .Oracle}}
+			</div>
+			<div id="oracle-qr-slot" class="oracle-qr-slot">
+				{{template "oracle-pairing-qr" .Oracle}}
+			</div>
+		</article>
+	</section>
+
+	{{template "seal-history" .}}
+</div>
+{{end}}
+
+{{define "seal-history"}}
+<section id="seal-history" class="data-section seal-history-section">
+	{{template "seal-history-table" .}}
+</section>
+{{end}}
+
+{{define "seal-history-oob"}}
+<section
+	id="seal-history"
+	class="data-section seal-history-section"
+	hx-swap-oob="true"
+>
+	{{template "seal-history-table" .}}
+</section>
+{{end}}
+
+{{define "seal-history-table"}}
+<table class="data-table">
+	<thead>
+		<tr>
+			<th>Type</th>
+			<th>Forged</th>
+			<th>Expires</th>
+			<th>Availability</th>
+			<th>Consumed</th>
+		</tr>
+	</thead>
+	<tbody>
+		{{if .SealHistory}}
+			{{range .SealHistory}}
+			<tr>
+				<td>{{.Kind}}</td>
+				<td>{{template "local-time" .ForgedAt}}</td>
+				<td>{{template "local-time" .ExpiresAt}}</td>
+				<td>
+					{{if eq .Availability "Available"}}
+						<span class="status status-seal-available">Available</span>
+					{{else if eq .Availability "Consumed"}}
+						<span class="status status-neutral">Consumed</span>
+					{{else}}
+						<span class="status status-seal-expired">Expired</span>
+					{{end}}
+				</td>
+				<td>
+					{{if .Consumed}}
+						{{template "local-time" .ConsumedAt}}
+					{{else}}
+						<span class="quiet">—</span>
+					{{end}}
+				</td>
+			</tr>
+			{{end}}
+		{{else}}
+		<tr>
+			<td colspan="5" class="empty-row">No Seals forged yet.</td>
+		</tr>
+		{{end}}
+	</tbody>
+</table>
+{{end}}
+
+{{define "eye-seal-outcome"}}
+{{template "eye-seal-result" .Eye}}
+{{template "seal-history-oob" .}}
+{{end}}
+
+{{define "oracle-pairing-qr"}}
+{{if .QRCodeDataURL}}
+<figure class="pairing-qr">
+	<img src="{{.QRCodeDataURL}}" alt="Oracle pairing QR code">
+</figure>
+{{end}}
+{{end}}
+
+{{define "oracle-qr-oob"}}
+<div id="oracle-qr-slot" class="oracle-qr-slot" hx-swap-oob="true">
+	{{template "oracle-pairing-qr" .Oracle}}
+</div>
+{{end}}
+
+{{define "oracle-seal-outcome"}}
+{{template "oracle-seal-result" .Oracle}}
+{{template "oracle-qr-oob" .}}
+{{template "seal-history-oob" .}}
+{{end}}
+
+{{define "eye-seal-result"}}
+{{if .Error}}
+	<p class="error" role="alert">{{.Error}}</p>
+{{end}}
+{{if .Seal}}
+	<div class="seal-output">
+		<div class="seal-value">
+			<code class="seal-text" data-seal-value>{{.Seal}}</code>
+			<button type="button" class="seal-copy" aria-label="Copy Seal" data-copy-seal>
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+					<rect x="8" y="8" width="11" height="11" rx="1"/>
+					<path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>
+				</svg>
+			</button>
+		</div>
+	</div>
+{{end}}
 {{end}}
 
 {{define "oracle-seal-result"}}
@@ -595,10 +752,17 @@ const panelTemplateSource = `
 	<p class="error" role="alert">{{.Error}}</p>
 {{end}}
 {{if .Seal}}
-	<p class="notice" role="status">
-		Seal generated. It expires {{template "local-time" .ExpiresAt}}.
-	</p>
-	<p class="secret">{{.Seal}}</p>
+	<div class="seal-output">
+		<div class="seal-value">
+			<code class="seal-text" data-seal-value>{{.Seal}}</code>
+			<button type="button" class="seal-copy" aria-label="Copy Seal" data-copy-seal>
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+					<rect x="8" y="8" width="11" height="11" rx="1"/>
+					<path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>
+				</svg>
+			</button>
+		</div>
+	</div>
 {{end}}
 {{end}}
 `

@@ -436,6 +436,25 @@ h2 {
 	color: #a8b5c5;
 }
 
+.status-seal-available {
+	background: #f2f5f8;
+	color: #050505;
+}
+
+.status-seal-expired {
+	background: #252525;
+	color: #a8a8a8;
+}
+
+.seal-history-section .status-neutral {
+	background: #252525;
+	color: #d0d0d0;
+}
+
+.seal-history-section .data-table tbody tr:hover {
+	background: #111;
+}
+
 .reason {
 	display: block;
 	margin-top: 0.25rem;
@@ -464,12 +483,199 @@ h2 {
 	white-space: nowrap;
 }
 
-.pairing-section {
-	padding: 1.25rem 2.25rem;
+.seals-section {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+	padding: 1.25rem 2.25rem 0;
 }
 
-.pairing-section form {
-	margin-bottom: 1rem;
+.seal-card {
+	display: grid;
+	position: relative;
+	height: 15rem;
+	min-height: 0;
+	min-width: 0;
+	border: 1px solid #fff;
+	background: #000;
+	padding: 1.25rem;
+}
+
+.seal-card-eye {
+	place-items: center;
+}
+
+.seal-card-oracle {
+	place-items: center;
+	grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.seal-card-oracle .seal-card-main {
+	width: min(11rem, calc(100% - 13rem));
+	grid-row: 1;
+}
+
+.seal-card-main {
+	display: flex;
+	height: 100%;
+	width: 100%;
+	min-width: 0;
+	align-items: center;
+	flex-direction: column;
+	text-align: center;
+}
+
+.seal-type-icon {
+	width: 4.25rem;
+	height: 4.25rem;
+	color: #fff;
+}
+
+.seal-card h2 {
+	margin: 0.55rem 0 0;
+	color: #fff;
+	font-size: 1.2rem;
+}
+
+.seal-form {
+	align-items: center;
+	display: flex;
+	position: absolute;
+	bottom: 2.25rem;
+	left: 50%;
+	flex-direction: column;
+	margin: 0;
+	transform: translateX(-50%);
+}
+
+.seal-form button {
+	transition:
+		background 120ms ease,
+		border-color 120ms ease,
+		color 120ms ease,
+		transform 120ms ease;
+}
+
+.seal-form button:hover {
+	transform: translateY(-1px);
+}
+
+.seal-result {
+	position: absolute;
+	right: 1.25rem;
+	bottom: 0.5rem;
+	left: 1.25rem;
+	width: auto;
+	min-height: 0;
+	margin: 0;
+	text-align: center;
+}
+
+.seal-card-oracle .seal-result {
+	grid-row: auto;
+}
+
+.seal-result .error {
+	margin: 0;
+}
+
+.seal-output {
+	animation: seal-reveal 220ms ease-out both;
+}
+
+.seal-value {
+	display: inline-flex;
+	min-width: 0;
+	max-width: 100%;
+	align-items: center;
+	color: #fff;
+	text-align: left;
+}
+
+.seal-text {
+	min-width: 0;
+	flex: 0 1 auto;
+	overflow-x: auto;
+	white-space: nowrap;
+	font-family:
+		"JetBrainsMono Nerd Font Propo", "JetBrains Mono", ui-monospace,
+		monospace;
+	font-size: 0.64rem;
+	line-height: 1.45;
+}
+
+.seal-copy {
+	display: grid;
+	width: 1.25rem;
+	height: 1.25rem;
+	min-height: 0;
+	flex: 0 0 auto;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	color: #fff;
+	font-size: 0.72rem;
+	padding: 0.2rem;
+	place-items: center;
+}
+
+.seal-copy:hover {
+	border-color: transparent;
+	background: transparent;
+	color: #fff;
+	transform: scale(1.08);
+}
+
+.seal-copy svg {
+	width: 1rem;
+	height: 1rem;
+}
+
+.seal-copy.is-copied {
+	opacity: 0.55;
+}
+
+.seal-copy.is-failed {
+	opacity: 0.35;
+}
+
+.seal-history-section .data-table th,
+.seal-history-section .data-table td {
+	text-align: center;
+}
+
+.oracle-qr-slot {
+	position: absolute;
+	top: 50%;
+	right: clamp(1.5rem, 3vw, 2rem);
+	width: clamp(7rem, 25%, 10rem);
+	transform: translateY(-50%);
+}
+
+.pairing-qr {
+	width: 100%;
+	margin: 0;
+	border: 0;
+	background: #fff;
+	padding: 4px;
+	animation: seal-reveal 260ms ease-out 70ms both;
+}
+
+.pairing-qr img {
+	display: block;
+	width: 100%;
+	image-rendering: pixelated;
+}
+
+@keyframes seal-reveal {
+	from {
+		opacity: 0;
+		transform: translateY(-0.35rem);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 .notice,
@@ -669,6 +875,10 @@ h2 {
 	.config-form {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
+
+	.seals-section {
+		grid-template-columns: 1fr;
+	}
 }
 
 @media (max-width: 54rem) {
@@ -688,11 +898,12 @@ h2 {
 
 	.side-nav {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 0.35rem;
 	}
 
 	.side-nav form {
-		flex: 1;
+		flex: 1 1 8rem;
 	}
 
 	.nav-button {
@@ -710,7 +921,7 @@ h2 {
 	.page-header,
 	.section-title,
 	.config-form,
-	.pairing-section,
+	.seals-section,
 	.list-footer,
 	.eye-summary {
 		padding-inline: 1rem;
@@ -759,6 +970,22 @@ h2 {
 
 	.config-form {
 		grid-template-columns: 1fr;
+	}
+
+	.seal-card-oracle {
+		grid-template-columns: minmax(0, 1fr) 4.5rem;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.seal-card-oracle .seal-card-main {
+		width: 100%;
+	}
+
+	.oracle-qr-slot {
+		position: static;
+		width: 100%;
+		transform: none;
 	}
 
 	.login-shell {

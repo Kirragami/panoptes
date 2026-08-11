@@ -8,6 +8,7 @@ import (
 	"crypto/subtle"
 	_ "embed"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -23,6 +24,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/skip2/go-qrcode"
 	"golang.org/x/crypto/argon2"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -45,6 +47,8 @@ const (
 	panelMaximumLoginAddresses = 1024
 	panelDockerHealthVision    = "docker.health"
 	panelDockerHealthForm      = 1
+	oraclePairingQRSchema      = "panoptes.oracle.pair"
+	oraclePairingQRVersion     = 1
 )
 
 var panelSigilPattern = regexp.MustCompile(
@@ -209,11 +213,42 @@ type panelOmensData struct {
 	Omens []panelOmen
 }
 
-type panelOracleSealData struct {
-	panelNavigationData
+type panelSealOutcome struct {
 	Seal      string
 	ExpiresAt time.Time
 	Error     string
+}
+
+type panelOracleSealOutcome struct {
+	Endpoint      string
+	Seal          string
+	ExpiresAt     time.Time
+	QRCodeDataURL template.URL
+	Error         string
+}
+
+type panelSealHistoryItem struct {
+	Kind         string
+	ForgedAt     time.Time
+	ExpiresAt    time.Time
+	Availability string
+	Consumed     bool
+	ConsumedAt   time.Time
+}
+
+type panelSealsData struct {
+	panelNavigationData
+	Eye         panelSealOutcome
+	Oracle      panelOracleSealOutcome
+	SealHistory []panelSealHistoryItem
+}
+
+type oraclePairingQRPayload struct {
+	Schema        string `json:"schema"`
+	Version       int    `json:"version"`
+	Endpoint      string `json:"endpoint"`
+	OracleSeal    string `json:"oracle_seal"`
+	ExpiresAtUnix int64  `json:"expires_at_unix"`
 }
 
 func loadControlPanelConfig() (*panelConfig, error) {
@@ -549,10 +584,22 @@ func (panel *controlPanel) routes() http.Handler {
 	)
 	mux.Handle(
 		"GET /panel/oracle-seal",
-		panel.requireSession(http.HandlerFunc(panel.handleOracleSealPage)),
+		panel.requireSession(http.HandlerFunc(panel.handleOracleSealRedirect)),
 	)
 	mux.Handle(
 		"POST /panel/oracle-seal",
+		panel.requireSession(http.HandlerFunc(panel.handleForgeOracleSeal)),
+	)
+	mux.Handle(
+		"GET /panel/seals",
+		panel.requireSession(http.HandlerFunc(panel.handleSeals)),
+	)
+	mux.Handle(
+		"POST /panel/seals/eye",
+		panel.requireSession(http.HandlerFunc(panel.handleForgeEyeSeal)),
+	)
+	mux.Handle(
+		"POST /panel/seals/oracle",
 		panel.requireSession(http.HandlerFunc(panel.handleForgeOracleSeal)),
 	)
 	mux.Handle(
@@ -582,7 +629,7 @@ func (panel *controlPanel) withSecurityHeaders(
 			"Content-Security-Policy",
 			"default-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; "+
 				"frame-ancestors 'none'; script-src 'self'; style-src 'self'; "+
-				"img-src 'self'; connect-src 'self'",
+				"img-src 'self' data:; connect-src 'self'",
 		)
 		writer.Header().Set("X-Content-Type-Options", "nosniff")
 		writer.Header().Set("X-Frame-Options", "DENY")
@@ -1163,7 +1210,7 @@ func (panel *controlPanel) handleToggleGaze(
 	)
 }
 
-func (panel *controlPanel) handleOracleSealPage(
+func (panel *controlPanel) handleSeals(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
@@ -1173,18 +1220,87 @@ func (panel *controlPanel) handleOracleSealPage(
 		return
 	}
 
-	data, err := panel.newOracleSealData(
+	data, err := panel.newSealsData(
 		session.csrfToken,
-		"",
-		time.Time{},
-		"",
+		panelSealOutcome{},
+		panelOracleSealOutcome{},
 	)
 	if err != nil {
 		panel.writeInternalError(writer, "recall panel navigation", err)
 		return
 	}
 
-	panel.render(writer, "oracle-seal", data, http.StatusOK)
+	panel.render(writer, "seals", data, http.StatusOK)
+}
+
+func (panel *controlPanel) handleOracleSealRedirect(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	http.Redirect(writer, request, "/panel/seals", http.StatusSeeOther)
+}
+
+func panopticonEndpointForRequest(request *http.Request) (string, error) {
+	authority, err := url.Parse(
+		"//" + strings.TrimSpace(request.Host),
+	)
+	if err != nil || authority.User != nil || authority.Host == "" {
+		return "", errors.New("panel host is invalid")
+	}
+
+	host := authority.Hostname()
+	if host == "" || strings.ContainsAny(host, " \t\r\n") {
+		return "", errors.New("panel host is invalid")
+	}
+
+	return net.JoinHostPort(host, panopticonGRPCPort), nil
+}
+
+func (panel *controlPanel) handleForgeEyeSeal(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	session, valid := panelSessionFromRequest(request)
+	if !valid || !panel.validateMutation(writer, request, session) {
+		return
+	}
+
+	if err := request.ParseForm(); err != nil ||
+		request.PostForm.Get("confirm") != "forge" {
+		panel.renderEyeSealOutcome(
+			writer,
+			request,
+			session.csrfToken,
+			"",
+			time.Time{},
+			"Confirmation is required.",
+		)
+		return
+	}
+
+	seal, expiresAt, err := panel.panoptes.issueSeal()
+	if err != nil {
+		log.Printf("[PANEL] Could not forge Eye Seal: %v", err)
+		panel.renderEyeSealOutcome(
+			writer,
+			request,
+			session.csrfToken,
+			"",
+			time.Time{},
+			"Unable to forge an Eye Seal.",
+		)
+		return
+	}
+
+	log.Printf("[PANEL] Forged an Eye Seal expiring at %s", expiresAt.Format(time.RFC3339))
+	panel.renderEyeSealOutcome(
+		writer,
+		request,
+		session.csrfToken,
+		seal,
+		expiresAt,
+		"",
+	)
 }
 
 func (panel *controlPanel) handleForgeOracleSeal(
@@ -1202,9 +1318,22 @@ func (panel *controlPanel) handleForgeOracleSeal(
 			writer,
 			request,
 			session.csrfToken,
-			"",
-			time.Time{},
-			"Confirmation is required.",
+			panelOracleSealOutcome{
+				Error: "Confirmation is required.",
+			},
+		)
+		return
+	}
+
+	endpoint, err := panopticonEndpointForRequest(request)
+	if err != nil {
+		panel.renderOracleSealOutcome(
+			writer,
+			request,
+			session.csrfToken,
+			panelOracleSealOutcome{
+				Error: "Unable to determine the Panopticon endpoint.",
+			},
 		)
 		return
 	}
@@ -1216,9 +1345,10 @@ func (panel *controlPanel) handleForgeOracleSeal(
 			writer,
 			request,
 			session.csrfToken,
-			"",
-			time.Time{},
-			"Unable to forge an Oracle Seal.",
+			panelOracleSealOutcome{
+				Endpoint: endpoint,
+				Error:    "Unable to forge an Oracle Seal.",
+			},
 		)
 		return
 	}
@@ -1228,9 +1358,11 @@ func (panel *controlPanel) handleForgeOracleSeal(
 		writer,
 		request,
 		session.csrfToken,
-		seal,
-		expiresAt,
-		"",
+		panelOracleSealOutcome{
+			Endpoint:  endpoint,
+			Seal:      seal,
+			ExpiresAt: expiresAt,
+		},
 	)
 }
 
@@ -1272,15 +1404,12 @@ func (panel *controlPanel) renderOracleSealOutcome(
 	writer http.ResponseWriter,
 	request *http.Request,
 	csrfToken string,
-	seal string,
-	expiresAt time.Time,
-	errorMessage string,
+	oracle panelOracleSealOutcome,
 ) {
-	data, err := panel.newOracleSealData(
+	data, err := panel.newSealsData(
 		csrfToken,
-		seal,
-		expiresAt,
-		errorMessage,
+		panelSealOutcome{},
+		oracle,
 	)
 	if err != nil {
 		panel.writeInternalError(writer, "recall panel navigation", err)
@@ -1288,16 +1417,51 @@ func (panel *controlPanel) renderOracleSealOutcome(
 	}
 
 	if isHTMXRequest(request) {
-		panel.render(writer, "oracle-seal-result", data, http.StatusOK)
+		panel.render(writer, "oracle-seal-outcome", data, http.StatusOK)
+		return
+	}
+
+	if oracle.Error != "" {
+		panel.render(writer, "seals", data, http.StatusBadRequest)
+		return
+	}
+
+	panel.render(writer, "seals", data, http.StatusOK)
+}
+
+func (panel *controlPanel) renderEyeSealOutcome(
+	writer http.ResponseWriter,
+	request *http.Request,
+	csrfToken string,
+	seal string,
+	expiresAt time.Time,
+	errorMessage string,
+) {
+	data, err := panel.newSealsData(
+		csrfToken,
+		panelSealOutcome{
+			Seal:      seal,
+			ExpiresAt: expiresAt,
+			Error:     errorMessage,
+		},
+		panelOracleSealOutcome{},
+	)
+	if err != nil {
+		panel.writeInternalError(writer, "recall panel navigation", err)
+		return
+	}
+
+	if isHTMXRequest(request) {
+		panel.render(writer, "eye-seal-outcome", data, http.StatusOK)
 		return
 	}
 
 	if errorMessage != "" {
-		panel.render(writer, "oracle-seal", data, http.StatusBadRequest)
+		panel.render(writer, "seals", data, http.StatusBadRequest)
 		return
 	}
 
-	panel.render(writer, "oracle-seal", data, http.StatusOK)
+	panel.render(writer, "seals", data, http.StatusOK)
 }
 
 func (panel *controlPanel) validateMutation(
@@ -1683,23 +1847,117 @@ func (panel *controlPanel) recallOmensData(
 	}, nil
 }
 
-func (panel *controlPanel) newOracleSealData(
+func (panel *controlPanel) newSealsData(
 	csrfToken string,
-	seal string,
-	expiresAt time.Time,
-	errorMessage string,
-) (panelOracleSealData, error) {
-	navigation, err := panel.recallNavigationData(csrfToken, "oracles")
+	eye panelSealOutcome,
+	oracle panelOracleSealOutcome,
+) (panelSealsData, error) {
+	navigation, err := panel.recallNavigationData(csrfToken, "seals")
 	if err != nil {
-		return panelOracleSealData{}, err
+		return panelSealsData{}, err
 	}
 
-	return panelOracleSealData{
+	records, err := panel.panoptes.chronicle.RecallSeals()
+	if err != nil {
+		return panelSealsData{}, err
+	}
+
+	data := panelSealsData{
 		panelNavigationData: navigation,
-		Seal:                seal,
-		ExpiresAt:           expiresAt,
-		Error:               errorMessage,
-	}, nil
+		Eye:                 eye,
+		Oracle:              oracle,
+		SealHistory:         panelSealHistoryFromRecords(records, time.Now().UTC()),
+	}
+
+	if oracle.Seal == "" {
+		return data, nil
+	}
+
+	qrCodeDataURL, err := oraclePairingQRCode(
+		oracle.Endpoint,
+		oracle.Seal,
+		oracle.ExpiresAt,
+	)
+	if err != nil {
+		return panelSealsData{}, err
+	}
+	data.Oracle.QRCodeDataURL = qrCodeDataURL
+
+	return data, nil
+}
+
+func panelSealHistoryFromRecords(
+	records []SealRecord,
+	now time.Time,
+) []panelSealHistoryItem {
+	history := make([]panelSealHistoryItem, 0, len(records))
+	for _, record := range records {
+		item := panelSealHistoryItem{
+			Kind:         record.Kind,
+			ForgedAt:     record.ForgedAt,
+			ExpiresAt:    record.ExpiresAt,
+			Availability: "Available",
+		}
+
+		if record.ConsumedAt != nil {
+			item.Availability = "Consumed"
+			item.Consumed = true
+			item.ConsumedAt = *record.ConsumedAt
+		} else if now.After(record.ExpiresAt) {
+			item.Availability = "Expired"
+		}
+
+		history = append(history, item)
+	}
+
+	return history
+}
+
+func oraclePairingQRCode(
+	endpoint string,
+	oracleSeal string,
+	expiresAt time.Time,
+) (template.URL, error) {
+	payload, err := oraclePairingPayload(endpoint, oracleSeal, expiresAt)
+	if err != nil {
+		return "", err
+	}
+
+	code, err := qrcode.New(string(payload), qrcode.Medium)
+	if err != nil {
+		return "", fmt.Errorf("create Oracle pairing QR code: %w", err)
+	}
+	code.DisableBorder = true
+
+	png, err := code.PNG(320)
+	if err != nil {
+		return "", fmt.Errorf("encode Oracle pairing QR code: %w", err)
+	}
+
+	// The URL is generated exclusively from our PNG bytes and is safe to place
+	// in the authenticated, no-store pairing response.
+	return template.URL(
+		"data:image/png;base64," + base64.StdEncoding.EncodeToString(png),
+	), nil
+}
+
+func oraclePairingPayload(
+	endpoint string,
+	oracleSeal string,
+	expiresAt time.Time,
+) ([]byte, error) {
+	payload, err := json.Marshal(oraclePairingQRPayload{
+		Schema:        oraclePairingQRSchema,
+		Version:       oraclePairingQRVersion,
+		Endpoint:      endpoint,
+		OracleSeal:    oracleSeal,
+		ExpiresAtUnix: expiresAt.Unix(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("encode Oracle pairing payload: %w", err)
+	}
+
+	return payload, nil
 }
 
 func panelOmensFromRecords(records []OmenRecord) []panelOmen {
