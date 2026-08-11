@@ -634,6 +634,7 @@ const panelTemplateSource = `
 			</div>
 			<div id="oracle-qr-slot" class="oracle-qr-slot">
 				{{template "oracle-pairing-qr" .Oracle}}
+				{{template "seal-consumed-eye" .}}
 			</div>
 		</article>
 	</section>
@@ -643,7 +644,13 @@ const panelTemplateSource = `
 {{end}}
 
 {{define "seal-history"}}
-<section id="seal-history" class="data-section seal-history-section">
+<section
+	id="seal-history"
+	class="data-section seal-history-section"
+	hx-get="/panel/fragments/seal-history"
+	hx-trigger="every 5s"
+	hx-swap="outerHTML"
+>
 	{{template "seal-history-table" .}}
 </section>
 {{end}}
@@ -652,6 +659,9 @@ const panelTemplateSource = `
 <section
 	id="seal-history"
 	class="data-section seal-history-section"
+	hx-get="/panel/fragments/seal-history"
+	hx-trigger="every 5s"
+	hx-swap="outerHTML"
 	hx-swap-oob="true"
 >
 	{{template "seal-history-table" .}}
@@ -672,7 +682,11 @@ const panelTemplateSource = `
 	<tbody>
 		{{if .SealHistory}}
 			{{range .SealHistory}}
-			<tr>
+			<tr
+				data-seal-kind="{{.Kind}}"
+				data-seal-expires-at="{{panelUnix .ExpiresAt}}"
+				data-seal-availability="{{.Availability}}"
+			>
 				<td>{{.Kind}}</td>
 				<td>{{template "local-time" .ForgedAt}}</td>
 				<td>{{template "local-time" .ExpiresAt}}</td>
@@ -719,7 +733,17 @@ const panelTemplateSource = `
 {{define "oracle-qr-oob"}}
 <div id="oracle-qr-slot" class="oracle-qr-slot" hx-swap-oob="true">
 	{{template "oracle-pairing-qr" .Oracle}}
+	{{template "seal-consumed-eye" .}}
 </div>
+{{end}}
+
+{{define "seal-consumed-eye"}}
+<span class="seal-consumed-eye" aria-hidden="true">
+	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+		<path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/>
+		<circle cx="12" cy="12" r="2.5"/>
+	</svg>
+</span>
 {{end}}
 
 {{define "oracle-seal-outcome"}}
@@ -733,7 +757,12 @@ const panelTemplateSource = `
 	<p class="error" role="alert">{{.Error}}</p>
 {{end}}
 {{if .Seal}}
-	<div class="seal-output">
+	<div
+		class="seal-output"
+		data-seal-kind="Eye"
+		data-seal-id="{{.SealID}}"
+		data-seal-expires-at="{{panelUnix .ExpiresAt}}"
+	>
 		<div class="seal-value">
 			<code class="seal-text" data-seal-value>{{.Seal}}</code>
 			<button type="button" class="seal-copy" aria-label="Copy Seal" data-copy-seal>
@@ -752,7 +781,12 @@ const panelTemplateSource = `
 	<p class="error" role="alert">{{.Error}}</p>
 {{end}}
 {{if .Seal}}
-	<div class="seal-output">
+	<div
+		class="seal-output"
+		data-seal-kind="Oracle"
+		data-seal-id="{{.SealID}}"
+		data-seal-expires-at="{{panelUnix .ExpiresAt}}"
+	>
 		<div class="seal-value">
 			<code class="seal-text" data-seal-value>{{.Seal}}</code>
 			<button type="button" class="seal-copy" aria-label="Copy Seal" data-copy-seal>

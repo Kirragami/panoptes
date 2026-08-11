@@ -60,6 +60,103 @@
 		}
 	};
 
+	const activeSeal = (kind) => {
+		const slug = kind.toLowerCase();
+		const card = document.querySelector(`.seal-card-${slug}`);
+		const seal = card?.querySelector(
+			`#${slug}-seal-result .seal-output[data-seal-kind="${kind}"]`,
+		);
+		if (!card || !seal) {
+			return null;
+		}
+
+		const sealID = seal.dataset.sealId;
+		const expiresAt = seal.dataset.sealExpiresAt;
+		if (!sealID || !expiresAt) {
+			return null;
+		}
+
+		if (card.dataset.activeSealId !== sealID) {
+			card.dataset.activeSealId = sealID;
+			card.classList.remove("is-consuming", "is-consumed");
+		}
+
+		return { card, expiresAt, sealID };
+	};
+
+	const playSealConsumption = (kind, sealID) => {
+		const active = activeSeal(kind);
+		if (
+			!active ||
+			active.sealID !== sealID ||
+			active.card.classList.contains("is-consuming") ||
+			active.card.classList.contains("is-consumed")
+		) {
+			return;
+		}
+
+		active.card.classList.add("is-consuming");
+		window.setTimeout(() => {
+			if (active.card.dataset.activeSealId !== sealID) {
+				return;
+			}
+			active.card.classList.remove("is-consuming");
+			active.card.classList.add("is-consumed");
+		}, kind === "Oracle" ? 3200 : 1500);
+	};
+
+	const refreshSealHistory = () => {
+		if (!document.getElementById("seal-history") || !window.htmx?.ajax) {
+			return;
+		}
+		window.htmx.ajax("GET", "/panel/fragments/seal-history", {
+			target: "#seal-history",
+			swap: "outerHTML",
+		});
+	};
+
+	const syncSealConsumption = (kind) => {
+		const active = activeSeal(kind);
+		if (!active) {
+			return;
+		}
+
+		const consumed = [...document.querySelectorAll(
+			"#seal-history tr[data-seal-kind]",
+		)].some(
+			(row) =>
+				row.dataset.sealKind === kind &&
+				row.dataset.sealExpiresAt === active.expiresAt &&
+				row.dataset.sealAvailability === "Consumed",
+		);
+		if (consumed) {
+			playSealConsumption(kind, active.sealID);
+		}
+	};
+
+	const connectSealEvents = () => {
+		if (!window.EventSource) {
+			return;
+		}
+
+		const events = new EventSource("/panel/events/seals");
+		events.addEventListener("seal-consumed", (event) => {
+			try {
+				const consumption = JSON.parse(event.data);
+				if (
+					(consumption.kind !== "Oracle" && consumption.kind !== "Eye") ||
+					typeof consumption.seal_id !== "string"
+				) {
+					return;
+				}
+				playSealConsumption(consumption.kind, consumption.seal_id);
+				refreshSealHistory();
+			} catch {
+				// Ignore malformed stream messages and await the next event.
+			}
+		});
+	};
+
 	document.body.addEventListener("panel:access-granted", () => {
 		const status = document.getElementById("login-auth");
 		const target = status?.dataset.redirect || "/panel/";
@@ -103,9 +200,14 @@
 	document.addEventListener("DOMContentLoaded", () => {
 		localizeTimes();
 		dismissAccessDenied();
+		syncSealConsumption("Eye");
+		syncSealConsumption("Oracle");
+		connectSealEvents();
 	});
 	document.body.addEventListener("htmx:afterSwap", () => {
 		localizeTimes();
 		dismissAccessDenied();
+		syncSealConsumption("Eye");
+		syncSealConsumption("Oracle");
 	});
 })();

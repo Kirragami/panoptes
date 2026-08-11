@@ -70,14 +70,22 @@ func (s *PanoptesServer) admitBind(eyeID, seal, brand string) (string, error) {
 	}
 
 	admittedAt := time.Now().UTC()
+	sealID := hashSeal(seal)
 
 	if err := s.chronicle.ConsumeSealAndInscribeBrand(
-		hashSeal(seal),
+		sealID,
 		eyeID,
 		hashBrand(newBrand),
 		admittedAt,
 	); err != nil {
 		return "", err
+	}
+
+	if s.sealEvents != nil {
+		s.sealEvents.publish(sealConsumptionEvent{
+			Kind:   "Eye",
+			SealID: sealID,
+		})
 	}
 
 	return newBrand, nil

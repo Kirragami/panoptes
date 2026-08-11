@@ -215,6 +215,7 @@ type panelOmensData struct {
 
 type panelSealOutcome struct {
 	Seal      string
+	SealID    string
 	ExpiresAt time.Time
 	Error     string
 }
@@ -222,6 +223,7 @@ type panelSealOutcome struct {
 type panelOracleSealOutcome struct {
 	Endpoint      string
 	Seal          string
+	SealID        string
 	ExpiresAt     time.Time
 	QRCodeDataURL template.URL
 	Error         string
@@ -593,6 +595,14 @@ func (panel *controlPanel) routes() http.Handler {
 	mux.Handle(
 		"GET /panel/seals",
 		panel.requireSession(http.HandlerFunc(panel.handleSeals)),
+	)
+	mux.Handle(
+		"GET /panel/fragments/seal-history",
+		panel.requireSession(http.HandlerFunc(panel.handleSealHistory)),
+	)
+	mux.Handle(
+		"GET /panel/events/seals",
+		panel.requireSession(http.HandlerFunc(panel.handleSealEvents)),
 	)
 	mux.Handle(
 		"POST /panel/seals/eye",
@@ -1233,6 +1243,84 @@ func (panel *controlPanel) handleSeals(
 	panel.render(writer, "seals", data, http.StatusOK)
 }
 
+func (panel *controlPanel) handleSealHistory(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	session, valid := panelSessionFromRequest(request)
+	if !valid {
+		panel.handleUnauthenticated(writer, request)
+		return
+	}
+
+	data, err := panel.newSealsData(
+		session.csrfToken,
+		panelSealOutcome{},
+		panelOracleSealOutcome{},
+	)
+	if err != nil {
+		panel.writeInternalError(writer, "recall Seals", err)
+		return
+	}
+
+	panel.render(writer, "seal-history", data, http.StatusOK)
+}
+
+func (panel *controlPanel) handleSealEvents(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	if panel.panoptes.sealEvents == nil {
+		http.Error(writer, "Seal events are unavailable", http.StatusServiceUnavailable)
+		return
+	}
+
+	flusher, supported := writer.(http.Flusher)
+	if !supported {
+		http.Error(writer, "streaming is unavailable", http.StatusInternalServerError)
+		return
+	}
+
+	_ = http.NewResponseController(writer).SetWriteDeadline(time.Time{})
+	writer.Header().Set("Content-Type", "text/event-stream")
+	writer.Header().Set("Connection", "keep-alive")
+	writer.Header().Set("X-Accel-Buffering", "no")
+	_, _ = fmt.Fprint(writer, "retry: 1000\n\n")
+	flusher.Flush()
+
+	events, unsubscribe := panel.panoptes.sealEvents.subscribe()
+	defer unsubscribe()
+
+	keepAlive := time.NewTicker(10 * time.Second)
+	defer keepAlive.Stop()
+
+	for {
+		select {
+		case <-request.Context().Done():
+			return
+		case event := <-events:
+			payload, err := json.Marshal(event)
+			if err != nil {
+				log.Printf("[PANEL] Could not encode Seal event: %v", err)
+				continue
+			}
+			if _, err := fmt.Fprintf(
+				writer,
+				"event: seal-consumed\ndata: %s\n\n",
+				payload,
+			); err != nil {
+				return
+			}
+			flusher.Flush()
+		case <-keepAlive.C:
+			if _, err := fmt.Fprint(writer, ": keepalive\n\n"); err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
+}
+
 func (panel *controlPanel) handleOracleSealRedirect(
 	writer http.ResponseWriter,
 	request *http.Request,
@@ -1361,6 +1449,7 @@ func (panel *controlPanel) handleForgeOracleSeal(
 		panelOracleSealOutcome{
 			Endpoint:  endpoint,
 			Seal:      seal,
+			SealID:    hashSeal(seal),
 			ExpiresAt: expiresAt,
 		},
 	)
@@ -1441,6 +1530,7 @@ func (panel *controlPanel) renderEyeSealOutcome(
 		csrfToken,
 		panelSealOutcome{
 			Seal:      seal,
+			SealID:    hashSeal(seal),
 			ExpiresAt: expiresAt,
 			Error:     errorMessage,
 		},

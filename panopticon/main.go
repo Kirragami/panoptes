@@ -35,6 +35,55 @@ type PanoptesServer struct {
 	chronicle  *Chronicle
 	edictToken string
 	harbinger  Harbinger
+	sealEvents *sealConsumptionHub
+}
+
+type sealConsumptionEvent struct {
+	Kind   string `json:"kind"`
+	SealID string `json:"seal_id"`
+}
+
+type sealConsumptionHub struct {
+	mu          sync.Mutex
+	subscribers map[chan sealConsumptionEvent]struct{}
+}
+
+func newSealConsumptionHub() *sealConsumptionHub {
+	return &sealConsumptionHub{
+		subscribers: make(map[chan sealConsumptionEvent]struct{}),
+	}
+}
+
+func (hub *sealConsumptionHub) subscribe() (
+	<-chan sealConsumptionEvent,
+	func(),
+) {
+	subscriber := make(chan sealConsumptionEvent, 1)
+
+	hub.mu.Lock()
+	hub.subscribers[subscriber] = struct{}{}
+	hub.mu.Unlock()
+
+	return subscriber, func() {
+		hub.mu.Lock()
+		if _, found := hub.subscribers[subscriber]; found {
+			delete(hub.subscribers, subscriber)
+			close(subscriber)
+		}
+		hub.mu.Unlock()
+	}
+}
+
+func (hub *sealConsumptionHub) publish(event sealConsumptionEvent) {
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+
+	for subscriber := range hub.subscribers {
+		select {
+		case subscriber <- event:
+		default:
+		}
+	}
 }
 
 func (s *PanoptesServer) recordSight(eyeID string) {
@@ -263,6 +312,7 @@ func main() {
 		chronicle:  chronicle,
 		edictToken: edictToken,
 		harbinger:  harbinger,
+		sealEvents: newSealConsumptionHub(),
 	}
 
 	go panoptesServer.watchForClosedEyes()

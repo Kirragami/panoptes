@@ -76,6 +76,13 @@ func (s *PanoptesServer) pairOracle(
 		return "", err
 	}
 
+	if s.sealEvents != nil {
+		s.sealEvents.publish(sealConsumptionEvent{
+			Kind:   "Oracle",
+			SealID: hashSeal(oracleSeal),
+		})
+	}
+
 	return brand, nil
 }
 

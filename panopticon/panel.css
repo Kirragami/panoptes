@@ -667,6 +667,54 @@ h2 {
 	image-rendering: pixelated;
 }
 
+.seal-consumed-eye {
+	position: absolute;
+	z-index: 2;
+	top: 50%;
+	left: 50%;
+	width: 62%;
+	height: 62%;
+	color: #fff;
+	opacity: 0;
+	pointer-events: none;
+	transform: translate(-50%, -50%) scale(0.45);
+}
+
+.seal-consumed-eye svg {
+	width: 100%;
+	height: 100%;
+}
+
+.seal-card-oracle.is-consuming .pairing-qr {
+	animation:
+		seal-qr-blur 900ms ease-out forwards,
+		seal-qr-fade-out 900ms ease-in 2200ms forwards;
+}
+
+.seal-card-eye.is-consuming #eye-seal-result .seal-output {
+	animation: seal-fade-out 900ms ease-in 600ms forwards;
+}
+
+.seal-card-oracle.is-consuming #oracle-seal-result .seal-output {
+	animation: seal-fade-out 900ms ease-in 2200ms forwards;
+}
+
+.seal-card-oracle.is-consuming .seal-consumed-eye {
+	animation:
+		seal-eye-arrive 1400ms ease-out 300ms forwards,
+		seal-eye-depart 700ms ease-in 2200ms forwards;
+}
+
+.seal-card-oracle.is-consumed .pairing-qr,
+.seal-card-oracle.is-consumed #oracle-seal-result .seal-output,
+.seal-card-oracle.is-consumed .seal-consumed-eye {
+	visibility: hidden;
+}
+
+.seal-card-eye.is-consumed #eye-seal-result .seal-output {
+	visibility: hidden;
+}
+
 @keyframes seal-reveal {
 	from {
 		opacity: 0;
@@ -675,6 +723,70 @@ h2 {
 	to {
 		opacity: 1;
 		transform: translateY(0);
+	}
+}
+
+@keyframes seal-qr-blur {
+	from {
+		filter: blur(0);
+		opacity: 1;
+	}
+	to {
+		filter: blur(3px);
+		opacity: 0.72;
+	}
+}
+
+@keyframes seal-eye-arrive {
+	from {
+		filter: blur(3px);
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(0.45);
+	}
+	70% {
+		filter: blur(0);
+		opacity: 1;
+		transform: translate(-50%, -50%) scale(1.1);
+	}
+	to {
+		filter: blur(0);
+		opacity: 1;
+		transform: translate(-50%, -50%) scale(1);
+	}
+}
+
+@keyframes seal-eye-depart {
+	from {
+		filter: blur(0);
+		opacity: 1;
+		transform: translate(-50%, -50%) scale(1);
+	}
+	to {
+		filter: blur(2px);
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(0.9);
+	}
+}
+
+@keyframes seal-qr-fade-out {
+	from {
+		filter: blur(3px);
+		opacity: 0.72;
+	}
+	to {
+		filter: blur(5px);
+		opacity: 0;
+	}
+}
+
+@keyframes seal-fade-out {
+	from {
+		filter: blur(0);
+		opacity: 1;
+	}
+	to {
+		filter: blur(3px);
+		opacity: 0;
 	}
 }
 
