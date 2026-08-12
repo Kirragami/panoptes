@@ -688,7 +688,7 @@ h2 {
 .seal-card-oracle.is-consuming .pairing-qr {
 	animation:
 		seal-qr-blur 900ms ease-out forwards,
-		seal-qr-fade-out 900ms ease-in 2200ms forwards;
+		seal-qr-fade-out 600ms ease-in 900ms forwards;
 }
 
 .seal-card-eye.is-consuming #eye-seal-result .seal-output {
@@ -696,13 +696,11 @@ h2 {
 }
 
 .seal-card-oracle.is-consuming #oracle-seal-result .seal-output {
-	animation: seal-fade-out 900ms ease-in 2200ms forwards;
+	animation: seal-fade-out 600ms ease-in 900ms forwards;
 }
 
 .seal-card-oracle.is-consuming .seal-consumed-eye {
-	animation:
-		seal-eye-arrive 1400ms ease-out 300ms forwards,
-		seal-eye-depart 700ms ease-in 2200ms forwards;
+	animation: seal-eye-arrive 1400ms ease-out 300ms forwards;
 }
 
 .seal-card-oracle.is-consumed .pairing-qr,
@@ -743,28 +741,10 @@ h2 {
 		opacity: 0;
 		transform: translate(-50%, -50%) scale(0.45);
 	}
-	70% {
-		filter: blur(0);
-		opacity: 1;
-		transform: translate(-50%, -50%) scale(1.1);
-	}
 	to {
 		filter: blur(0);
 		opacity: 1;
 		transform: translate(-50%, -50%) scale(1);
-	}
-}
-
-@keyframes seal-eye-depart {
-	from {
-		filter: blur(0);
-		opacity: 1;
-		transform: translate(-50%, -50%) scale(1);
-	}
-	to {
-		filter: blur(2px);
-		opacity: 0;
-		transform: translate(-50%, -50%) scale(0.9);
 	}
 }
 

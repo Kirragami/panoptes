@@ -47,8 +47,6 @@ const (
 	panelMaximumLoginAddresses = 1024
 	panelDockerHealthVision    = "docker.health"
 	panelDockerHealthForm      = 1
-	oraclePairingQRSchema      = "panoptes.oracle.pair"
-	oraclePairingQRVersion     = 1
 )
 
 var panelSigilPattern = regexp.MustCompile(
@@ -243,14 +241,6 @@ type panelSealsData struct {
 	Eye         panelSealOutcome
 	Oracle      panelOracleSealOutcome
 	SealHistory []panelSealHistoryItem
-}
-
-type oraclePairingQRPayload struct {
-	Schema        string `json:"schema"`
-	Version       int    `json:"version"`
-	Endpoint      string `json:"endpoint"`
-	OracleSeal    string `json:"oracle_seal"`
-	ExpiresAtUnix int64  `json:"expires_at_unix"`
 }
 
 func loadControlPanelConfig() (*panelConfig, error) {
@@ -1966,7 +1956,6 @@ func (panel *controlPanel) newSealsData(
 	qrCodeDataURL, err := oraclePairingQRCode(
 		oracle.Endpoint,
 		oracle.Seal,
-		oracle.ExpiresAt,
 	)
 	if err != nil {
 		return panelSealsData{}, err
@@ -2006,14 +1995,8 @@ func panelSealHistoryFromRecords(
 func oraclePairingQRCode(
 	endpoint string,
 	oracleSeal string,
-	expiresAt time.Time,
 ) (template.URL, error) {
-	payload, err := oraclePairingPayload(endpoint, oracleSeal, expiresAt)
-	if err != nil {
-		return "", err
-	}
-
-	code, err := qrcode.New(string(payload), qrcode.Medium)
+	code, err := qrcode.New(oraclePairingPayload(endpoint, oracleSeal), qrcode.Medium)
 	if err != nil {
 		return "", fmt.Errorf("create Oracle pairing QR code: %w", err)
 	}
@@ -2031,23 +2014,16 @@ func oraclePairingQRCode(
 	), nil
 }
 
-func oraclePairingPayload(
-	endpoint string,
-	oracleSeal string,
-	expiresAt time.Time,
-) ([]byte, error) {
-	payload, err := json.Marshal(oraclePairingQRPayload{
-		Schema:        oraclePairingQRSchema,
-		Version:       oraclePairingQRVersion,
-		Endpoint:      endpoint,
-		OracleSeal:    oracleSeal,
-		ExpiresAtUnix: expiresAt.Unix(),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("encode Oracle pairing payload: %w", err)
-	}
-
-	return payload, nil
+// oraclePairingPayload is exactly two newline-delimited fields:
+//
+//	<Panopticon endpoint>
+//	<one-time Oracle Seal>
+//
+// The mobile Oracle splits the value on the first newline. The endpoint is
+// derived from a validated request host and the Seal is hex-encoded, so
+// neither can contain the delimiter.
+func oraclePairingPayload(endpoint string, oracleSeal string) string {
+	return endpoint + "\n" + oracleSeal
 }
 
 func panelOmensFromRecords(records []OmenRecord) []panelOmen {

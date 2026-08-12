@@ -102,7 +102,7 @@
 			}
 			active.card.classList.remove("is-consuming");
 			active.card.classList.add("is-consumed");
-		}, kind === "Oracle" ? 3200 : 1500);
+		}, kind === "Oracle" ? 1700 : 1500);
 	};
 
 	const refreshSealHistory = () => {
