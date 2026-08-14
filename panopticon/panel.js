@@ -60,6 +60,31 @@
 		}
 	};
 
+	const openOracleSigilViewer = (trigger) => {
+		const source = trigger.querySelector("img");
+		const viewer = document.getElementById("oracle-sigil-viewer");
+		const image = document.getElementById("oracle-sigil-viewer-image");
+		if (
+			!(source instanceof HTMLImageElement) ||
+			!(viewer instanceof HTMLDialogElement) ||
+			!(image instanceof HTMLImageElement)
+		) {
+			return;
+		}
+
+		image.src = source.src;
+		if (!viewer.open) {
+			viewer.showModal();
+		}
+	};
+
+	const closeOracleSigilViewer = () => {
+		const viewer = document.getElementById("oracle-sigil-viewer");
+		if (viewer instanceof HTMLDialogElement && viewer.open) {
+			viewer.close();
+		}
+	};
+
 	const activeSeal = (kind) => {
 		const slug = kind.toLowerCase();
 		const card = document.querySelector(`.seal-card-${slug}`);
@@ -170,6 +195,20 @@
 		if (!(event.target instanceof Element)) {
 			return;
 		}
+		const sigilTrigger = event.target.closest("[data-open-oracle-sigil]");
+		if (sigilTrigger) {
+			openOracleSigilViewer(sigilTrigger);
+			return;
+		}
+
+		const closeSigilViewer = event.target.closest(
+			"[data-close-oracle-sigil]",
+		);
+		if (closeSigilViewer) {
+			closeOracleSigilViewer();
+			return;
+		}
+
 		const button = event.target.closest("[data-copy-seal]");
 		if (!button) {
 			return;

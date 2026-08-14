@@ -506,12 +506,15 @@ h2 {
 }
 
 .seal-card-oracle {
-	place-items: center;
-	grid-template-rows: minmax(0, 1fr) auto;
+	grid-template-columns: minmax(0, 1fr) minmax(10rem, 12rem);
+	grid-template-rows: minmax(0, 1fr);
+	align-items: center;
+	column-gap: 1rem;
 }
 
 .seal-card-oracle .seal-card-main {
-	width: min(11rem, calc(100% - 13rem));
+	width: 100%;
+	grid-column: 1 / -1;
 	grid-row: 1;
 }
 
@@ -644,27 +647,96 @@ h2 {
 	text-align: center;
 }
 
-.oracle-qr-slot {
-	position: absolute;
-	top: 50%;
-	right: clamp(1.5rem, 3vw, 2rem);
-	width: clamp(7rem, 25%, 10rem);
-	transform: translateY(-50%);
+.oracle-seal-sigil-slot {
+	position: static;
+	width: 100%;
+	grid-column: 2;
+	grid-row: 1;
+	align-self: center;
+	justify-self: end;
+	z-index: 1;
 }
 
-.pairing-qr {
+.oracle-seal-sigil {
+	display: block;
 	width: 100%;
 	margin: 0;
 	border: 0;
-	background: #fff;
-	padding: 4px;
+	background: #050506;
+	color: inherit;
+	cursor: zoom-in;
+	padding: 0;
 	animation: seal-reveal 260ms ease-out 70ms both;
 }
 
-.pairing-qr img {
+.oracle-seal-sigil img {
 	display: block;
 	width: 100%;
-	image-rendering: pixelated;
+}
+
+.oracle-sigil-viewer {
+	box-sizing: border-box;
+	width: min(92vw, 58rem);
+	max-width: 92vw;
+	max-height: 96vh;
+	border: 1px solid #403d47;
+	background: #050506;
+	color: #fff;
+	padding: 1rem;
+}
+
+.oracle-sigil-viewer::backdrop {
+	background: rgb(0 0 0 / 0.88);
+}
+
+.oracle-sigil-viewer-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 0.8rem;
+}
+
+.oracle-sigil-viewer-header p,
+.oracle-sigil-viewer-hint {
+	margin: 0;
+	font-family:
+		"JetBrainsMono Nerd Font Propo", "JetBrains Mono", ui-monospace,
+		monospace;
+}
+
+.oracle-sigil-viewer-header p {
+	font-size: 0.8rem;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.oracle-sigil-viewer-close {
+	width: 2rem;
+	height: 2rem;
+	border: 1px solid #77737d;
+	background: transparent;
+	color: #fff;
+	font-size: 1.25rem;
+	line-height: 1;
+}
+
+.oracle-sigil-viewer-image {
+	display: block;
+	width: min(82vh, 100%);
+	max-width: 100%;
+	max-height: calc(96vh - 6rem);
+	margin: 0 auto;
+	background: #050506;
+}
+
+.oracle-sigil-viewer-hint {
+	margin-top: 0.8rem;
+	color: #b8b6c0;
+	font-size: 0.68rem;
+	line-height: 1.45;
+	text-align: center;
 }
 
 .seal-consumed-eye {
@@ -685,7 +757,7 @@ h2 {
 	height: 100%;
 }
 
-.seal-card-oracle.is-consuming .pairing-qr {
+.seal-card-oracle.is-consuming .oracle-seal-sigil {
 	animation:
 		seal-qr-blur 900ms ease-out forwards,
 		seal-qr-fade-out 600ms ease-in 900ms forwards;
@@ -703,7 +775,7 @@ h2 {
 	animation: seal-eye-arrive 1400ms ease-out 300ms forwards;
 }
 
-.seal-card-oracle.is-consumed .pairing-qr,
+.seal-card-oracle.is-consumed .oracle-seal-sigil,
 .seal-card-oracle.is-consumed #oracle-seal-result .seal-output,
 .seal-card-oracle.is-consumed .seal-consumed-eye {
 	visibility: hidden;
@@ -1065,7 +1137,7 @@ h2 {
 	}
 
 	.seal-card-oracle {
-		grid-template-columns: minmax(0, 1fr) 4.5rem;
+		grid-template-columns: minmax(0, 1fr) minmax(8rem, 10rem);
 		align-items: center;
 		gap: 1rem;
 	}
@@ -1074,10 +1146,8 @@ h2 {
 		width: 100%;
 	}
 
-	.oracle-qr-slot {
-		position: static;
+	.oracle-seal-sigil-slot {
 		width: 100%;
-		transform: none;
 	}
 
 	.login-shell {

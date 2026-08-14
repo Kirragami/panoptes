@@ -24,7 +24,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/skip2/go-qrcode"
 	"golang.org/x/crypto/argon2"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -219,12 +218,12 @@ type panelSealOutcome struct {
 }
 
 type panelOracleSealOutcome struct {
-	Endpoint      string
-	Seal          string
-	SealID        string
-	ExpiresAt     time.Time
-	QRCodeDataURL template.URL
-	Error         string
+	Endpoint         string
+	Seal             string
+	SealID           string
+	ExpiresAt        time.Time
+	SealImageDataURL template.URL
+	Error            string
 }
 
 type panelSealHistoryItem struct {
@@ -1953,14 +1952,11 @@ func (panel *controlPanel) newSealsData(
 		return data, nil
 	}
 
-	qrCodeDataURL, err := oraclePairingQRCode(
-		oracle.Endpoint,
-		oracle.Seal,
-	)
+	sealImageDataURL, err := forgeOracleSealSigil(oracle.Seal)
 	if err != nil {
 		return panelSealsData{}, err
 	}
-	data.Oracle.QRCodeDataURL = qrCodeDataURL
+	data.Oracle.SealImageDataURL = sealImageDataURL
 
 	return data, nil
 }
@@ -1990,40 +1986,6 @@ func panelSealHistoryFromRecords(
 	}
 
 	return history
-}
-
-func oraclePairingQRCode(
-	endpoint string,
-	oracleSeal string,
-) (template.URL, error) {
-	code, err := qrcode.New(oraclePairingPayload(endpoint, oracleSeal), qrcode.Medium)
-	if err != nil {
-		return "", fmt.Errorf("create Oracle pairing QR code: %w", err)
-	}
-	code.DisableBorder = true
-
-	png, err := code.PNG(320)
-	if err != nil {
-		return "", fmt.Errorf("encode Oracle pairing QR code: %w", err)
-	}
-
-	// The URL is generated exclusively from our PNG bytes and is safe to place
-	// in the authenticated, no-store pairing response.
-	return template.URL(
-		"data:image/png;base64," + base64.StdEncoding.EncodeToString(png),
-	), nil
-}
-
-// oraclePairingPayload is exactly two newline-delimited fields:
-//
-//	<Panopticon endpoint>
-//	<one-time Oracle Seal>
-//
-// The mobile Oracle splits the value on the first newline. The endpoint is
-// derived from a validated request host and the Seal is hex-encoded, so
-// neither can contain the delimiter.
-func oraclePairingPayload(endpoint string, oracleSeal string) string {
-	return endpoint + "\n" + oracleSeal
 }
 
 func panelOmensFromRecords(records []OmenRecord) []panelOmen {

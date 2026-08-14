@@ -5,7 +5,6 @@ go 1.26.4
 require (
 	firebase.google.com/go/v4 v4.21.0
 	github.com/Kirragami/panoptes/proto v0.0.0
-	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/crypto v0.52.0
 	google.golang.org/api v0.279.0
 	google.golang.org/grpc v1.81.1

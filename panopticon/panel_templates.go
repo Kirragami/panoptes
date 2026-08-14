@@ -632,12 +632,23 @@ const panelTemplateSource = `
 			<div id="oracle-seal-result" class="seal-result" aria-live="polite">
 				{{template "oracle-seal-result" .Oracle}}
 			</div>
-			<div id="oracle-qr-slot" class="oracle-qr-slot">
-				{{template "oracle-pairing-qr" .Oracle}}
+			<div id="oracle-seal-sigil-slot" class="oracle-seal-sigil-slot">
+				{{template "oracle-seal-sigil" .Oracle}}
 				{{template "seal-consumed-eye" .}}
 			</div>
 		</article>
 	</section>
+
+	<dialog id="oracle-sigil-viewer" class="oracle-sigil-viewer" aria-labelledby="oracle-sigil-viewer-title">
+		<div class="oracle-sigil-viewer-header">
+			<p id="oracle-sigil-viewer-title">Oracle Seal</p>
+			<button type="button" class="oracle-sigil-viewer-close" data-close-oracle-sigil aria-label="Close fullscreen Oracle Seal">
+				×
+			</button>
+		</div>
+		<img id="oracle-sigil-viewer-image" alt="Fullscreen Oracle pairing sigil">
+		<p class="oracle-sigil-viewer-hint">Display this sigil at full size for the Oracle to receive.</p>
+	</dialog>
 
 	{{template "seal-history" .}}
 </div>
@@ -722,17 +733,17 @@ const panelTemplateSource = `
 {{template "seal-history-oob" .}}
 {{end}}
 
-{{define "oracle-pairing-qr"}}
-{{if .QRCodeDataURL}}
-<figure class="pairing-qr">
-	<img src="{{.QRCodeDataURL}}" alt="Oracle pairing QR code">
-</figure>
+{{define "oracle-seal-sigil"}}
+{{if .SealImageDataURL}}
+<button type="button" class="oracle-seal-sigil" data-open-oracle-sigil aria-label="Open fullscreen Oracle pairing sigil">
+	<img src="{{.SealImageDataURL}}" alt="Oracle pairing sigil">
+</button>
 {{end}}
 {{end}}
 
-{{define "oracle-qr-oob"}}
-<div id="oracle-qr-slot" class="oracle-qr-slot" hx-swap-oob="true">
-	{{template "oracle-pairing-qr" .Oracle}}
+{{define "oracle-seal-sigil-oob"}}
+<div id="oracle-seal-sigil-slot" class="oracle-seal-sigil-slot" hx-swap-oob="true">
+	{{template "oracle-seal-sigil" .Oracle}}
 	{{template "seal-consumed-eye" .}}
 </div>
 {{end}}
@@ -748,7 +759,7 @@ const panelTemplateSource = `
 
 {{define "oracle-seal-outcome"}}
 {{template "oracle-seal-result" .Oracle}}
-{{template "oracle-qr-oob" .}}
+{{template "oracle-seal-sigil-oob" .}}
 {{template "seal-history-oob" .}}
 {{end}}
 
@@ -782,21 +793,12 @@ const panelTemplateSource = `
 {{end}}
 {{if .Seal}}
 	<div
+		hidden
 		class="seal-output"
 		data-seal-kind="Oracle"
 		data-seal-id="{{.SealID}}"
 		data-seal-expires-at="{{panelUnix .ExpiresAt}}"
-	>
-		<div class="seal-value">
-			<code class="seal-text" data-seal-value>{{.Seal}}</code>
-			<button type="button" class="seal-copy" aria-label="Copy Seal" data-copy-seal>
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-					<rect x="8" y="8" width="11" height="11" rx="1"/>
-					<path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>
-				</svg>
-			</button>
-		</div>
-	</div>
+	></div>
 {{end}}
 {{end}}
 `
