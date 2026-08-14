@@ -139,8 +139,8 @@ const panelTemplateSource = `
 						type="search"
 						name="q"
 						value="{{.Query}}"
-						placeholder="Filter by Eye ID"
-						aria-label="Filter Eyes by ID"
+						placeholder="Filter by Epithet or Eye ID"
+						aria-label="Filter Eyes by Epithet or ID"
 					>
 				<button type="submit" class="button-wide">Filter</button>
 				</form>
@@ -157,7 +157,7 @@ const panelTemplateSource = `
 					<thead>
 						<tr>
 							<th aria-label="Status"></th>
-							<th>Eye ID</th>
+							<th>Eye</th>
 							<th>Sigils</th>
 							<th>First seen</th>
 							<th>Last seen</th>
@@ -223,8 +223,9 @@ const panelTemplateSource = `
 		</td>
 		<td>
 			<form action="/panel/eyes/{{.ID}}" method="get">
-				<button type="submit" class="row-button">{{.ID}}</button>
+				<button type="submit" class="row-button">{{.DisplayName}}</button>
 			</form>
+			{{if .Epithet}}<div class="quiet">{{.ID}}</div>{{end}}
 		</td>
 		<td>
 			{{if .Sigils}}
@@ -257,7 +258,8 @@ const panelTemplateSource = `
 			<header class="page-header page-header-detail">
 				<div>
 					<p class="page-kicker">Eye</p>
-					<h1>{{.Eye.ID}}</h1>
+					<h1>{{.Eye.DisplayName}}</h1>
+					{{if .Eye.Epithet}}<p class="quiet">{{.Eye.ID}}</p>{{end}}
 					<p>First seen {{template "local-time" .Eye.FirstSeen}} · last seen {{template "local-time" .Eye.LastSeen}}</p>
 				</div>
 				<div class="header-actions">
@@ -526,7 +528,7 @@ const panelTemplateSource = `
 				<table class="data-table">
 					<thead>
 						<tr>
-							<th>Eye ID</th>
+							<th>Eye</th>
 							<th>Sigil</th>
 							<th>Turn</th>
 							<th>Received</th>
@@ -537,8 +539,9 @@ const panelTemplateSource = `
 						<tr>
 							<td>
 								<form action="/panel/eyes/{{.EyeID}}" method="get">
-									<button type="submit" class="row-button">{{.EyeID}}</button>
+									<button type="submit" class="row-button">{{.DisplayName}}</button>
 								</form>
+								{{if .Epithet}}<div class="quiet">{{.EyeID}}</div>{{end}}
 							</td>
 							<td><span class="sigil">{{.GazeSigil}}</span></td>
 							<td>{{.GazeTurn}}</td>

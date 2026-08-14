@@ -15,6 +15,7 @@ import (
 
 type Sighting struct {
 	EyeID     string
+	Epithet   string
 	FirstSeen time.Time
 	LastSeen  time.Time
 }
@@ -77,6 +78,7 @@ func openChronicle(path string) (*Chronicle, error) {
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS sightings (
 			eye_id TEXT PRIMARY KEY,
+			eye_epithet TEXT NOT NULL DEFAULT '',
 			first_seen_unix INTEGER NOT NULL,
 			last_seen_unix INTEGER NOT NULL
 		);
@@ -84,6 +86,16 @@ func openChronicle(path string) (*Chronicle, error) {
 	if err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("prepare Chronicle sightings: %w", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS sightings_epithet_unique
+		ON sightings (lower(eye_epithet))
+		WHERE eye_epithet != ''
+	`)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("prepare Chronicle Epithet uniqueness: %w", err)
 	}
 
 	_, err = db.Exec(`
@@ -208,34 +220,39 @@ func (c *Chronicle) Close() error {
 }
 
 func (c *Chronicle) RecordSight(eyeID string, seenAt time.Time) (Sighting, bool, error) {
-	seenUnix := seenAt.Unix()
+	seenAtUnix := seenAt.Unix()
 
 	var existing Sighting
 	var firstSeenUnix, lastSeenUnix int64
 
 	err := c.db.QueryRow(
-		`SELECT eye_id, first_seen_unix, last_seen_unix
+		`SELECT eye_id, first_seen_unix, last_seen_unix, eye_epithet
 		 FROM sightings
 		 WHERE eye_id = ?`,
-		eyeID,
-	).Scan(&existing.EyeID, &firstSeenUnix, &lastSeenUnix)
+		 eyeID,
+	).Scan(
+		&existing.EyeID,
+		&firstSeenUnix,
+		&lastSeenUnix,
+		&existing.Epithet,
+	)
 
 	if err == sql.ErrNoRows {
 		_, err = c.db.Exec(
 			`INSERT INTO sightings (eye_id, first_seen_unix, last_seen_unix)
 			 VALUES (?, ?, ?)`,
-			eyeID,
-			seenUnix,
-			seenUnix,
+			 eyeID,
+			 seenAtUnix,
+			 seenAtUnix,
 		)
 		if err != nil {
 			return Sighting{}, false, fmt.Errorf("inscribe first sighting: %w", err)
 		}
 
 		return Sighting{
-			EyeID:     eyeID,
-			FirstSeen: seenAt,
-			LastSeen:  seenAt,
+			EyeID:      eyeID,
+			FirstSeen:  seenAt,
+			LastSeen:   seenAt,
 		}, true, nil
 	}
 
@@ -247,24 +264,94 @@ func (c *Chronicle) RecordSight(eyeID string, seenAt time.Time) (Sighting, bool,
 		`UPDATE sightings
 		 SET last_seen_unix = ?
 		 WHERE eye_id = ?`,
-		seenUnix,
-		eyeID,
+		 seenAtUnix,
+		 eyeID,
 	)
 	if err != nil {
 		return Sighting{}, false, fmt.Errorf("update sighting: %w", err)
 	}
 
 	return Sighting{
-		EyeID:     existing.EyeID,
+		EyeID: existing.EyeID,
+		Epithet: existing.Epithet,
 		FirstSeen: time.Unix(firstSeenUnix, 0).UTC(),
-		LastSeen:  seenAt.UTC(),
+		LastSeen: seenAt.UTC(),
 	}, false, nil
+}
+
+func (c *Chronicle) RecallEpithet(eyeID string) (string, error) {
+	eyeID = strings.TrimSpace(eyeID)
+	if eyeID == "" {
+		return "", fmt.Errorf("cannot recall an Epithet for an empty Eye")
+	}
+
+	var epithet string
+	err := c.db.QueryRow(
+		`SELECT eye_epithet FROM sightings
+		 WHERE eye_id = ?`,
+		eyeID,
+	).Scan(&epithet)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("recall Epithet: %w", err)
+	}
+
+	return epithet, nil
+}
+
+func (c *Chronicle) RememberEpithet(eyeID, epithet string) error {
+	eyeID = strings.TrimSpace(eyeID)
+	if eyeID == "" {
+		return fmt.Errorf("cannot remember an Epithet for an empty Eye")
+	}
+
+	epithet, err := normalizeEpithet(epithet)
+	if err != nil {
+		return err
+	}
+
+	var holder string
+	err = c.db.QueryRow(
+		`SELECT eye_id FROM sightings
+		WHERE lower(eye_epithet) = lower(?) AND eye_id != ?`,
+		epithet,
+		eyeID,
+	).Scan(&holder)
+	if err == nil {
+		return fmt.Errorf("Epithet %s is already borne by another Eye", epithet)
+	}
+	if err != sql.ErrNoRows {
+		return fmt.Errorf("consult Epithet: %w", err)
+	}
+
+	result, err := c.db.Exec(
+		`UPDATE sightings
+		SET eye_epithet = ?
+		WHERE eye_id = ?`,
+		epithet,
+		eyeID,
+	)
+	if err != nil {
+		return fmt.Errorf("remember Epithet: %w", err)
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("confirm Epithet remembrance: %w", err)
+	}
+	if affected == 0 {
+		return fmt.Errorf("Eye %s has no sighting to bear an Epithet", eyeID)
+	}
+
+	return nil
 }
 
 func (c *Chronicle) RecallSightings() ([]Sighting, error) {
 	rows, err := c.db.Query(
-		`SELECT eye_id, first_seen_unix, last_seen_unix
-		 FROM sightings
+		`SELECT eye_id, first_seen_unix, last_seen_unix, eye_epithet
+		FROM sightings
 		 ORDER BY first_seen_unix ASC`,
 	)
 	if err != nil {
@@ -282,6 +369,7 @@ func (c *Chronicle) RecallSightings() ([]Sighting, error) {
 			&sighting.EyeID,
 			&firstSeenUnix,
 			&lastSeenUnix,
+			&sighting.Epithet,
 		); err != nil {
 			return nil, fmt.Errorf("read sighting: %w", err)
 		}
@@ -317,8 +405,9 @@ func (c *Chronicle) RecallSightingsPage(
 	whereClause := ""
 	var queryArguments []any
 	if query != "" {
-		whereClause = " WHERE eye_id LIKE ?"
-		queryArguments = append(queryArguments, "%"+query+"%")
+		whereClause = " WHERE eye_id LIKE ? OR eye_epithet LIKE ?"
+		like := "%" + query + "%"
+		queryArguments = append(queryArguments, like, like)
 	}
 
 	var total int
@@ -333,7 +422,7 @@ func (c *Chronicle) RecallSightingsPage(
 	arguments := append([]any{}, queryArguments...)
 	arguments = append(arguments, limit, offset)
 	rows, err := c.db.Query(
-		`SELECT eye_id, first_seen_unix, last_seen_unix
+		`SELECT eye_id, first_seen_unix, last_seen_unix, eye_epithet
 		 FROM sightings`+whereClause+`
 		 ORDER BY last_seen_unix DESC, eye_id ASC
 		 LIMIT ? OFFSET ?`,
@@ -353,6 +442,7 @@ func (c *Chronicle) RecallSightingsPage(
 			&sighting.EyeID,
 			&firstSeenUnix,
 			&lastSeenUnix,
+			&sighting.Epithet,
 		); err != nil {
 			return nil, 0, fmt.Errorf("read sighting: %w", err)
 		}

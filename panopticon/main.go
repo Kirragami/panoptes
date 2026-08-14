@@ -176,7 +176,20 @@ func (s *PanoptesServer) BindEye(
 
 	s.recordSight(eyeID)
 
-	log.Printf("[PANOPTICON] Received binding request from Eye ID: %s", eyeID)
+	if err := s.chronicle.RememberEpithet(eyeID, req.GetEpithet()); err != nil {
+		log.Printf("[PANOPTICON] Bind refused Epithet for Eye %s: %v", eyeID, err)
+
+		return &proto.BindResponse{
+			Success:       false,
+			StatusMessage: err.Error(),
+		}, nil
+	}
+
+	log.Printf(
+		"[PANOPTICON] Received binding request from Eye %s (%s)",
+		req.GetEpithet(),
+		eyeID,
+	)
 
 	return &proto.BindResponse{
 		Success:       true,
@@ -241,7 +254,7 @@ func (s *PanoptesServer) KeepVigil(
 		}
 
 		log.Printf(
-			"[PANOPTICON] Vigil from Eye %s at %d",
+			"[PANOPTICON] Vigil from Eye %s at %v",
 			eyeID,
 			pulse.GetSentAtUnix(),
 		)

@@ -66,6 +66,11 @@ func (h *FCMHarbinger) BearOmen(
 		return nil
 	}
 
+	epithet, err := h.chronicle.RecallEpithet(omen.EyeID)
+	if err != nil {
+		return err
+	}
+
 	var failures []error
 
 	for _, token := range tokens {
@@ -76,6 +81,7 @@ func (h *FCMHarbinger) BearOmen(
 				Data: map[string]string{
 					"omen_id":          omen.OmenID,
 					"eye_id":           omen.EyeID,
+					"epithet":          epithet,
 					"gaze_sigil":       omen.GazeSigil,
 					"gaze_turn":        strconv.FormatUint(omen.GazeTurn, 10),
 					"befallen_at_unix": strconv.FormatInt(omen.BefallenAt.Unix(), 10),

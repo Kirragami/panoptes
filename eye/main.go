@@ -25,8 +25,16 @@ func main() {
 
 	iris.Brand = brand
 
+	epithet, err := resolveEpithet(iris.StateDir)
+	if err != nil {
+		log.Fatalf("Eye failed to take its Epithet: %v", err)
+	}
+
+	iris.Epithet = epithet
+
 	log.Printf(
-		"Eye identity: %s; Panopticon: %s",
+		"Eye identity: %s (%s); Panopticon: %s",
+		epithet,
 		eyeID,
 		iris.PanopticonEndpoint,
 	)

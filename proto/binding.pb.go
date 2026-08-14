@@ -27,6 +27,7 @@ type BindRequest struct {
 	Seal          string                 `protobuf:"bytes,2,opt,name=seal,proto3" json:"seal,omitempty"`
 	Brand         string                 `protobuf:"bytes,3,opt,name=brand,proto3" json:"brand,omitempty"`
 	Visions       []*Vision              `protobuf:"bytes,4,rep,name=visions,proto3" json:"visions,omitempty"`
+	Epithet       string                 `protobuf:"bytes,5,opt,name=epithet,proto3" json:"epithet,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -87,6 +88,13 @@ func (x *BindRequest) GetVisions() []*Vision {
 		return x.Visions
 	}
 	return nil
+}
+
+func (x *BindRequest) GetEpithet() string {
+	if x != nil {
+		return x.Epithet
+	}
+	return ""
 }
 
 type BindResponse struct {
@@ -153,12 +161,13 @@ var File_binding_proto protoreflect.FileDescriptor
 
 const file_binding_proto_rawDesc = "" +
 	"\n" +
-	"\rbinding.proto\x12\bpanoptes\x1a\fmythos.proto\"z\n" +
+	"\rbinding.proto\x12\bpanoptes\x1a\fmythos.proto\"\x94\x01\n" +
 	"\vBindRequest\x12\x15\n" +
 	"\x06eye_id\x18\x01 \x01(\tR\x05eyeId\x12\x12\n" +
 	"\x04seal\x18\x02 \x01(\tR\x04seal\x12\x14\n" +
 	"\x05brand\x18\x03 \x01(\tR\x05brand\x12*\n" +
-	"\avisions\x18\x04 \x03(\v2\x10.panoptes.VisionR\avisions\"e\n" +
+	"\avisions\x18\x04 \x03(\v2\x10.panoptes.VisionR\avisions\x12\x18\n" +
+	"\aepithet\x18\x05 \x01(\tR\aepithet\"e\n" +
 	"\fBindResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12%\n" +
 	"\x0estatus_message\x18\x02 \x01(\tR\rstatusMessage\x12\x14\n" +

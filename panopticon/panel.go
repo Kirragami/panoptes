@@ -125,6 +125,7 @@ type controlPanel struct {
 
 type panelEye struct {
 	ID        string
+	Epithet   string
 	FirstSeen time.Time
 	LastSeen  time.Time
 	Online    bool
@@ -149,6 +150,7 @@ type panelNavigationData struct {
 
 type panelOmen struct {
 	EyeID      string
+	Epithet    string
 	GazeSigil  string
 	GazeTurn   uint64
 	BefallenAt time.Time
@@ -241,6 +243,22 @@ type panelSealsData struct {
 	Eye         panelSealOutcome
 	Oracle      panelOracleSealOutcome
 	SealHistory []panelSealHistoryItem
+}
+
+func (omen panelOmen) DisplayName() string {
+	if strings.TrimSpace(omen.Epithet) != "" {
+		return omen.Epithet
+	}
+
+	return omen.EyeID
+}
+
+func (eye panelEye) DisplayName() string {
+	if strings.TrimSpace(eye.Epithet) != "" {
+		return eye.Epithet
+	}
+
+	return eye.ID
 }
 
 func loadControlPanelConfig() (*panelConfig, error) {
@@ -1737,6 +1755,7 @@ func (panel *controlPanel) eyesFromSightings(
 
 		eyes = append(eyes, panelEye{
 			ID:        sighting.EyeID,
+			Epithet:   sighting.Epithet,
 			FirstSeen: sighting.FirstSeen,
 			LastSeen:  sighting.LastSeen,
 			Online:    state.Online,
@@ -1846,7 +1865,8 @@ func (panel *controlPanel) recallEyeSummary(
 
 	for _, eye := range eyes {
 		if needle != "" &&
-			!strings.Contains(strings.ToLower(eye.ID), needle) {
+			!strings.Contains(strings.ToLower(eye.ID), needle) &&
+			!strings.Contains(strings.ToLower(eye.Epithet), needle) {
 			continue
 		}
 
@@ -1921,9 +1941,14 @@ func (panel *controlPanel) recallOmensData(
 		return panelOmensData{}, err
 	}
 
+	omens, err := panel.panelOmensFromRecords(records)
+	if err != nil {
+		return panelOmensData{}, err
+	}
+
 	return panelOmensData{
 		panelNavigationData: navigation,
-		Omens:               panelOmensFromRecords(records),
+		Omens:               omens,
 	}, nil
 }
 
@@ -2026,11 +2051,24 @@ func oraclePairingPayload(endpoint string, oracleSeal string) string {
 	return endpoint + "\n" + oracleSeal
 }
 
-func panelOmensFromRecords(records []OmenRecord) []panelOmen {
+func (panel *controlPanel) panelOmensFromRecords(
+	records []OmenRecord,
+) ([]panelOmen, error) {
+	sightings, err := panel.panoptes.chronicle.RecallSightings()
+	if err != nil {
+		return nil, err
+	}
+
+	epithets := make(map[string]string, len(sightings))
+	for _, sighting := range sightings {
+		epithets[sighting.EyeID] = sighting.Epithet
+	}
+
 	omens := make([]panelOmen, 0, len(records))
 	for _, record := range records {
 		omens = append(omens, panelOmen{
 			EyeID:      record.EyeID,
+			Epithet:    epithets[record.EyeID],
 			GazeSigil:  record.GazeSigil,
 			GazeTurn:   record.GazeTurn,
 			BefallenAt: record.BefallenAt,
@@ -2038,7 +2076,7 @@ func panelOmensFromRecords(records []OmenRecord) []panelOmen {
 		})
 	}
 
-	return omens
+	return omens, nil
 }
 
 func (panel *controlPanel) recallEye(eyeID string) (panelEye, error) {

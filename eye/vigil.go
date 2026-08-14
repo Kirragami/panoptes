@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/Kirragami/panoptes/proto"
 	"github.com/Kirragami/panoptes/eye/visions"
+	"github.com/Kirragami/panoptes/proto"
 )
 
 func keepVigil(
@@ -63,13 +63,13 @@ func keepVigil(
 }
 
 func maintainVigil(
-		iris Iris, 
-		eyeID string,
-		registry *visions.Registry,
-	) {
+	iris Iris,
+	eyeID string,
+	registry *visions.Registry,
+) {
 	retryDelay := time.Second
 	maxRetryDelay := 30 * time.Second
-	
+
 	keeper := newGazeKeeper(
 		&iris,
 		eyeID,
@@ -87,7 +87,7 @@ func maintainVigil(
 		cancelBind()
 
 		if err == nil {
-			log.Printf("Eye successfully bound to Panopticon: %s", eyeID)
+			log.Printf("Eye %s successfully bound to Panopticon: %s", iris.Epithet, eyeID)
 
 			retryDelay = time.Second
 

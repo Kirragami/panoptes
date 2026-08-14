@@ -12,6 +12,7 @@ type Iris struct {
 	PanopticonServerName string
 	Seal                 string
 	Brand                string
+	Epithet              string
 	StateDir             string
 }
 

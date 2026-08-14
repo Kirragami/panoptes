@@ -33,6 +33,7 @@ func bindEye(
 		Seal:  iris.Seal,
 		Brand: iris.Brand,
 		Visions: revelations,
+		Epithet: iris.Epithet,
 	})
 	if err != nil {
 		return fmt.Errorf("bind Eye to Panopticon: %w", err)
@@ -58,6 +59,10 @@ func bindEye(
 	if iris.Seal != "" {
 		iris.Seal = ""
 		log.Printf("[EYE] Seal has been used and discarded")
+	}
+
+	if err := imprintEpithet(iris.StateDir, iris.Epithet); err != nil {
+		return fmt.Errorf("imprint Epithet: %w", err)
 	}
 
 	return nil

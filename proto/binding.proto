@@ -11,6 +11,7 @@ message BindRequest {
     string seal = 2;
     string brand = 3;
     repeated Vision visions = 4;
+    string epithet = 5;
 }
 
 message BindResponse {
