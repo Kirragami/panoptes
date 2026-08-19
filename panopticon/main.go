@@ -126,16 +126,32 @@ func (s *PanoptesServer) watchForClosedEyes() {
 	for range ticker.C {
 		cutoff := time.Now().Add(-pulseTimeout)
 
+		type closedEye struct {
+			id       string
+			lastSeen time.Time
+		}
+
+		var closed []closedEye
+
 		s.mu.Lock()
 		for eyeID, eye := range s.eyes {
 			if eye.Online && eye.LastSeen.Before(cutoff) {
 				eye.Online = false
 				s.eyes[eyeID] = eye
 
+				closed = append(closed, closedEye{
+					id:       eyeID,
+					lastSeen: eye.LastSeen,
+				})
+
 				log.Printf("[PANOPTICON] Eye closed: %s", eyeID)
 			}
 		}
 		s.mu.Unlock()
+
+		for _, eye := range closed {
+			s.raiseEclipse(eye.id, eye.lastSeen)
+		}
 	}
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -10,6 +11,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+const eclipseSigil = "eclipse"
 
 func (s *PanoptesServer) RaiseOmen(
 	ctx context.Context,
@@ -130,4 +133,43 @@ func (s *PanoptesServer) RaiseOmen(
 		Received: true,
 		Reason:   "Omen received",
 	}, nil
+}
+
+func (s *PanoptesServer) raiseEclipse(eyeID string, befallenAt time.Time) {
+	eyeID = strings.TrimSpace(eyeID)
+	if eyeID == "" {
+		return
+	}
+
+	if befallenAt.IsZero() {
+		befallenAt = time.Now().UTC()
+	}
+
+	omen := OmenRecord{
+		OmenID:     fmt.Sprintf("eclipse:%s:%d", eyeID, befallenAt.Unix()),
+		EyeID:      eyeID,
+		GazeSigil:  eclipseSigil,
+		GazeTurn:   1,
+		BefallenAt: befallenAt.UTC(),
+		ReceivedAt: time.Now().UTC(),
+	}
+
+	isNew, err := s.chronicle.ReceiveOmen(omen)
+	if err != nil {
+		log.Printf("[PANOPTICON] Failed to receive Eclipse for EYe %s: %v", eyeID, err)
+		return
+	}
+	if !isNew {
+		return
+	}
+
+	if err := s.harbinger.BearOmen(context.Background(), omen); err != nil {
+		log.Printf(
+			"[PANOPTICON] Harbinger failed for Eclipse %s: %v",
+			omen.OmenID,
+			err,
+		)
+	}
+
+	log.Printf("[PANOPTICON] An Eclipse has befallen on Eye %s", eyeID)
 }
