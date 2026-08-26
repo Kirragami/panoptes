@@ -290,7 +290,12 @@ func (s *PanoptesServer) KeepVigil(
 }
 
 func main() {
-	chronicle, err := openChronicle("./panopticon.chronicle.db")
+	chroniclePath, err := resolveChroniclePath()
+	if err != nil {
+		log.Fatalf("Panopticon could not place its Chronicle: %v", err)
+	}
+
+	chronicle, err := openChronicle(chroniclePath)
 	if err != nil {
 		log.Fatalf("Panopticon could not open its Chronicle: %v", err)
 	}

@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -62,6 +64,19 @@ type SealRecord struct {
 	ForgedAt   time.Time
 	ExpiresAt  time.Time
 	ConsumedAt *time.Time
+}
+
+func resolveChroniclePath() (string, error) {
+	path := strings.TrimSpace(os.Getenv("PANOPTICON_CHRONICLE"))
+	if path == "" {
+		path = "./panopticon.chronicle.db"
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return "", fmt.Errorf("prepare Chronicle directory: %w", err)
+	}
+
+	return path, nil
 }
 
 func openChronicle(path string) (*Chronicle, error) {

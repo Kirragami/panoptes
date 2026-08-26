@@ -57,6 +57,10 @@ func bindEye(
 	}
 
 	if iris.Seal != "" {
+		if err := discardSeal(iris.StateDir); err != nil {
+			return fmt.Errorf("discard consumed Seal: %w", err)
+		}
+
 		iris.Seal = ""
 		log.Printf("[EYE] Seal has been used and discarded")
 	}
