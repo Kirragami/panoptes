@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Kirragami/panoptes/panopticon/cli"
 	"github.com/Kirragami/panoptes/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -290,6 +291,14 @@ func (s *PanoptesServer) KeepVigil(
 }
 
 func main() {
+	if handled, err := cli.Handle(os.Args[1:]); handled {
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "panopticon: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	chroniclePath, err := resolveChroniclePath()
 	if err != nil {
 		log.Fatalf("Panopticon could not place its Chronicle: %v", err)
@@ -340,6 +349,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Panopticon could not awaken its Harbinger: %v", err)
 	}
+
 
 	panoptesServer := &PanoptesServer{
 		eyes:       eyes,

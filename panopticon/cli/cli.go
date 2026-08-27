@@ -2,7 +2,9 @@ package cli
 
 import (
 	"bufio"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -14,25 +16,21 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/argon2"
 )
 
 var version = "dev"
 
 const (
-	installBinary = "/opt/panoptes/eye"
-	installState  = "/var/lib/panoptes/eye"
-	installEnv    = "/etc/panoptes/eye.env"
-	installUnit   = "/etc/systemd/system/panoptes-eye.service"
-	installDropIn = "/etc/systemd/system/panoptes-eye.service.d"
-	installLink   = "/usr/local/bin/eye"
-	installUser   = "panoptes-eye"
-	serviceName   = "panoptes-eye.service"
+	installBinary = "/opt/panoptes/panopticon"
+	installState  = "/var/lib/panoptes/panopticon"
+	installEnv    = "/etc/panoptes/panopticon.env"
+	installUnit   = "/etc/systemd/system/panopticon.service"
+	installLink   = "/usr/local/bin/panopticon"
+	installUser   = "panopticon"
+	serviceName   = "panopticon.service"
 	releaseBase   = "https://github.com/Kirragami/panoptes/releases/latest/download"
-
-	eyeIDFile   = "eye-id"
-	epithetFile = "epithet"
-	brandFile   = "brand"
-	sealFile    = "seal"
 )
 
 func Handle(args []string) (bool, error) {
@@ -50,6 +48,8 @@ func Handle(args []string) (bool, error) {
 		return true, update()
 	case "uninstall":
 		return true, uninstall(args[1:])
+	case "hash-password":
+		return true, hashPanelPassword()
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 		return true, nil
@@ -59,11 +59,12 @@ func Handle(args []string) (bool, error) {
 }
 
 const usage = `usage:
-	eye                      run the Eye daemon
-	eye version              print the stamped version
-	eye status               print install and state
-	eye update               replace the installed binary
-	eye uninstall [--yes]    remove the unit, state, and user
+	panopticon                      run the Panopticon daemon
+	panopticon version              print the stamped version
+	panopticon status               print install and state
+	panopticon update               replace the installed binary
+	panopticon uninstall [--yes]    remove the unit, Chronicle, and user
+	panopticon hash-password        read a password from stdin, print an Argon2id hash
 `
 
 func printStatus() error {
@@ -71,38 +72,25 @@ func printStatus() error {
 		return err
 	}
 
-	stateDir := strings.TrimSpace(os.Getenv("PANOPTES_STATE_DIR"))
-	if stateDir == "" {
-		if _, err := os.Stat(installState); err == nil {
-			stateDir = installState
-		} else {
-			stateDir = "./state"
-		}
+	chronicle := strings.TrimSpace(os.Getenv("PANOPTICON_CHRONICLE"))
+	if chronicle == "" {
+		chronicle = "./panopticon.chronicle.db"
+	}
+	panelAddr := strings.TrimSpace(os.Getenv("PANOPTICON_PANEL_ADDR"))
+	cert := strings.TrimSpace(os.Getenv("PANOPTICON_TLS_CERT_FILE"))
+	firebase := strings.TrimSpace(os.Getenv("PANOPTICON_FIREBASE_CREDENTIALS"))
+
+	chronicleState := "missing"
+	if _, err := os.Stat(chronicle); err == nil {
+		chronicleState = "present"
 	}
 
-	endpoint := strings.TrimSpace(os.Getenv("PANOPTICON_ENDPOINT"))
-	eyeID, _ := os.ReadFile(filepath.Join(stateDir, eyeIDFile))
-	epithet, _ := os.ReadFile(filepath.Join(stateDir, epithetFile))
-	_, brandErr := os.Stat(filepath.Join(stateDir, brandFile))
-	_, sealErr := os.Stat(filepath.Join(stateDir, sealFile))
-
-	branded := "no"
-	if brandErr == nil {
-		branded = "yes"
-	}
-	sealPresent := "no"
-	if sealErr == nil {
-		sealPresent = "yes"
-	}
-
-	fmt.Printf("version		 %s\n", version)
-	fmt.Printf("state		 %s\n", stateDir)
-	fmt.Printf("endpoint	 %s\n", endpoint)
-	fmt.Printf("eye ID		 %s\n", strings.TrimSpace(string(eyeID)))
-	fmt.Printf("epithet		 %s\n", strings.TrimSpace(string(epithet)))
-	fmt.Printf("branded		 %s\n", branded)
-	fmt.Printf("seal present %s\n", sealPresent)
-	fmt.Printf("service		 %s\n", serviceState(serviceName))
+	fmt.Printf("version        %s\n", version)
+	fmt.Printf("chronicle      %s (%s)\n", chronicle, chronicleState)
+	fmt.Printf("panel          %s\n", panelAddr)
+	fmt.Printf("tls_cert       %s\n", cert)
+	fmt.Printf("firebase       %s\n", firebase)
+	fmt.Printf("service        %s\n", serviceState(serviceName))
 	return nil
 }
 
@@ -114,23 +102,23 @@ func update() error {
 		return fmt.Errorf("update is only published for linux")
 	}
 	if _, err := os.Stat(installBinary); err != nil {
-		return fmt.Errorf("Eye is not installed at %s", installBinary)
+		return fmt.Errorf("Panopticon is not installed at %s", installBinary)
 	}
 
 	client := &http.Client{Timeout: 60 * time.Second}
 	remoteVersion, err := fetchReleaseText(client, releaseBase+"/VERSION")
 	if err != nil {
-		return fmt.Errorf("recall remote Eye version: %w", err)
+		return fmt.Errorf("recall remote Panopticon version: %w", err)
 	}
 	if remoteVersion == version {
-		fmt.Printf("Eye is already %s\n", version)
+		fmt.Printf("Panopticon is already %s\n", version)
 		return nil
 	}
 
-	asset := "eye-linux-" + runtime.GOARCH
+	asset := "panopticon-linux-" + runtime.GOARCH
 	checksums, err := fetchReleaseText(client, releaseBase+"/checksums.txt")
 	if err != nil {
-		return fmt.Errorf("recall Eye checksums: %w", err)
+		return fmt.Errorf("recall Panopticon checksums: %w", err)
 	}
 	wantHash, err := checksumForAsset(checksums, asset)
 	if err != nil {
@@ -139,18 +127,18 @@ func update() error {
 
 	payload, err := fetchReleaseBytes(client, releaseBase+"/"+asset)
 	if err != nil {
-		return fmt.Errorf("download Eye: %w", err)
+		return fmt.Errorf("download Panopticon: %w", err)
 	}
 	sum := sha256.Sum256(payload)
 	if hex.EncodeToString(sum[:]) != wantHash {
-		return fmt.Errorf("downloaded Eye checksum does not match")
+		return fmt.Errorf("downloaded Panopticon checksum does not match")
 	}
 
 	if err := replaceExecutable(installBinary, payload); err != nil {
 		return err
 	}
 	_ = runRootCommand("systemctl", "restart", serviceName)
-	fmt.Printf("Eye updated from %s to %s\n", version, remoteVersion)
+	fmt.Printf("Panopticon updated from %s to %s\n", version, remoteVersion)
 	return nil
 }
 
@@ -161,13 +149,13 @@ func uninstall(args []string) error {
 
 	if _, err := os.Stat(installBinary); err != nil && os.IsNotExist(err) {
 		if _, unitErr := os.Stat(installUnit); unitErr != nil && os.IsNotExist(unitErr) {
-			return fmt.Errorf("Eye is not installed")
+			return fmt.Errorf("Panopticon is not installed")
 		}
 	}
 
 	if err := confirmDestructive(
 		args,
-		"This removes the Eye unit, binary, state, and user panoptes-eye.\nType yes to continue: ",
+		"This removes the Panopticon unit, binary, Chronicle, and user panopticon.\nType yes to continue: ",
 	); err != nil {
 		return err
 	}
@@ -175,9 +163,6 @@ func uninstall(args []string) error {
 	_ = runRootCommand("systemctl", "stop", serviceName)
 	_ = runRootCommand("systemctl", "disable", serviceName)
 	if err := removePath(installUnit); err != nil {
-		return err
-	}
-	if err := removePath(installDropIn); err != nil {
 		return err
 	}
 	if err := removePath(installBinary); err != nil {
@@ -199,8 +184,55 @@ func uninstall(args []string) error {
 	removeEmptyDir("/opt/panoptes")
 	removeEmptyDir("/etc/panoptes")
 	removeEmptyDir("/var/lib/panoptes")
-	fmt.Println("Eye removed")
+	fmt.Println("Panopticon removed")
 	return nil
+}
+
+func hashPanelPassword() error {
+	payload, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return fmt.Errorf("read password: %w", err)
+	}
+	password := strings.TrimRight(string(payload), "\r\n")
+	if password == "" {
+		return fmt.Errorf("password is required")
+	}
+	encoded, err := encodeArgon2idPassword(password)
+	if err != nil {
+		return err
+	}
+	fmt.Println(encoded)
+	return nil
+}
+
+func encodeArgon2idPassword(password string) (string, error) {
+	salt := make([]byte, 16)
+	if _, err := rand.Read(salt); err != nil {
+		return "", fmt.Errorf("forge password salt: %w", err)
+	}
+
+	const memory = 64 * 1024
+	const iterations = 3
+	const parallelism = 4
+	const keyLength = 32
+
+	key := argon2.IDKey(
+		[]byte(password),
+		salt,
+		iterations,
+		memory,
+		parallelism,
+		keyLength,
+	)
+
+	return fmt.Sprintf(
+		"$argon2id$v=19$m=%d,t=%d,p=%d$%s$%s",
+		memory,
+		iterations,
+		parallelism,
+		base64.RawStdEncoding.EncodeToString(salt),
+		base64.RawStdEncoding.EncodeToString(key),
+	), nil
 }
 
 func requireRoot() error {
@@ -227,7 +259,8 @@ func confirmDestructive(args []string, prompt string) error {
 	if err != nil {
 		return fmt.Errorf("read confirmation: %w", err)
 	}
-	if strings.ToLower(strings.TrimSpace(line)) != "yes" && strings.ToLower(strings.TrimSpace(line)) != "y" {
+	answer := strings.ToLower(strings.TrimSpace(line))
+	if answer != "yes" && answer != "y" {
 		return fmt.Errorf("cancelled")
 	}
 	return nil
@@ -316,7 +349,6 @@ func fetchReleaseBytes(client *http.Client, url string) ([]byte, error) {
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("%s: %s", url, response.Status)
 	}
-
 	const maxAsset = 200 << 20
 	body, err := io.ReadAll(io.LimitReader(response.Body, maxAsset+1))
 	if err != nil {
@@ -347,7 +379,7 @@ func replaceExecutable(path string, payload []byte) error {
 	if err := os.MkdirAll(directory, 0755); err != nil {
 		return err
 	}
-	tempFile, err := os.CreateTemp(directory, ".eye-*")
+	tempFile, err := os.CreateTemp(directory, ".panopticon-*")
 	if err != nil {
 		return err
 	}
