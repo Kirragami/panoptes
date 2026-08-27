@@ -195,6 +195,12 @@ readable_by_user() {
 	su -s /bin/sh "$name" -c "test -r $(printf '%q' "$path")"
 }
 
+executable_by_user() {
+	local name=$1
+	local path=$2
+	su -s /bin/sh "$name" -c "test -x $(printf '%q' "$path")"
+}
+
 trim() {
 	local s=$1
 	s="${s#"${s%%[![:space:]]*}"}"
@@ -208,8 +214,9 @@ grant_ancestors_exec() {
 	local dir
 	dir=$(dirname -- "$path")
 	while [[ $dir != / ]]; do
-		if [[ -d $dir ]]; then
-			setfacl -m "u:${user}:--x" "$dir"
+		if [[ -d $dir ]] && ! executable_by_user "$user" "$dir"; then
+			chgrp "$user" "$dir"
+			chmod g+x "$dir"
 		fi
 		dir=$(dirname -- "$dir")
 	done
@@ -223,8 +230,8 @@ grant_read_to_user() {
 	[[ -n $resolved && -e $resolved ]] || return 1
 	grant_ancestors_exec "$user" "$path"
 	grant_ancestors_exec "$user" "$resolved"
-	setfacl -m "u:${user}:r--" "$resolved"
-	setfacl -d -m "u:${user}:r--" "$(dirname -- "$resolved")"
+	chgrp "$user" "$resolved"
+	chmod g+r "$resolved"
 }
 
 ensure_readable_by_user() {
@@ -233,12 +240,9 @@ ensure_readable_by_user() {
 	if readable_by_user "$user" "$path"; then
 		return
 	fi
-	if ! command -v setfacl >/dev/null; then
-		die "$path is not readable by $user; install the acl package (setfacl) or grant that user execute on Let's Encrypt live/archive directories and read on the files"
-	fi
-	grant_read_to_user "$user" "$path" || die "$path is not readable by $user; could not set ACLs"
+	grant_read_to_user "$user" "$path" || die "$path is not readable by $user; could not chmod"
 	if ! readable_by_user "$user" "$path"; then
-		die "$path is not readable by $user after ACL grant"
+		die "$path is not readable by $user after chmod"
 	fi
 }
 
@@ -251,11 +255,13 @@ reject_home_path() {
 	esac
 }
 
-systemd_escape() {
-	local value=$1
-	value=${value//%/%%}
-	value=${value//\$/\$\$}
-	printf '%s' "$value"
+write_env_line() {
+	local name=$1
+	local value=$2
+	if [[ $value == *$'\n'* ]]; then
+		die "$name cannot contain a newline"
+	fi
+	printf '%s=%s\n' "$name" "$value"
 }
 
 systemd_unescape() {
@@ -277,15 +283,6 @@ systemd_unescape() {
 		fi
 	done
 	printf '%s' "$out"
-}
-
-write_env_line() {
-	local name=$1
-	local value=$2
-	if [[ $value == *$'\n'* ]]; then
-		die "$name cannot contain a newline"
-	fi
-	printf '%s=%s\n' "$name" "$(systemd_escape "$value")"
 }
 
 load_env_value() {
@@ -434,15 +431,13 @@ tls_key=$(trim "$(prompt_if_empty tls-key "TLS key path: " "$tls_key")")
 if [[ -z $firebase ]]; then
 	firebase=$(load_env_value "$panopticon_env" PANOPTICON_FIREBASE_CREDENTIALS)
 fi
-firebase=$(trim "$firebase")
+firebase=$(trim "$(prompt_if_empty firebase "Firebase credentials path: " "$firebase")")
 reject_home_path "$tls_cert"
 reject_home_path "$tls_key"
+reject_home_path "$firebase"
 [[ -f $tls_cert ]] || die "TLS certificate not found: $tls_cert"
 [[ -f $tls_key ]] || die "TLS key not found: $tls_key"
-if [[ -n $firebase ]]; then
-	reject_home_path "$firebase"
-	[[ -f $firebase ]] || die "Firebase credentials not found: $firebase"
-fi
+[[ -f $firebase ]] || die "Firebase credentials not found: $firebase"
 
 workdir=$(mktemp -d)
 trap 'rm -rf "$workdir"' EXIT
@@ -480,9 +475,7 @@ ln -sfn "$panopticon_binary" "$panopticon_link"
 
 ensure_readable_by_user "$panopticon_user" "$tls_cert"
 ensure_readable_by_user "$panopticon_user" "$tls_key"
-if [[ -n $firebase ]]; then
-	ensure_readable_by_user "$panopticon_user" "$firebase"
-fi
+ensure_readable_by_user "$panopticon_user" "$firebase"
 
 {
 	write_env_line PANOPTICON_TLS_CERT_FILE "$tls_cert"
@@ -492,9 +485,7 @@ fi
 	write_env_line PANOPTICON_PANEL_PASSWORD_HASH "$password_hash"
 	write_env_line PANOPTICON_PANEL_SESSION_KEY "$session_key"
 	write_env_line PANOPTICON_EDICT_TOKEN "$edict_token"
-	if [[ -n $firebase ]]; then
-		write_env_line PANOPTICON_FIREBASE_CREDENTIALS "$firebase"
-	fi
+	write_env_line PANOPTICON_FIREBASE_CREDENTIALS "$firebase"
 } >"$panopticon_env"
 chmod 0600 "$panopticon_env"
 chown root:root "$panopticon_env"

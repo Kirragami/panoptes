@@ -24,11 +24,13 @@ usage:
 
 options:
   --endpoint HOST:PORT
+  --seal SEAL
   --seal-file PATH
   --epithet NAME
   --binary PATH
   --from-source
   --docker
+  --no-docker
 EOF
 }
 
@@ -66,6 +68,51 @@ prompt_if_empty() {
 		return
 	fi
 	die "$name is required"
+}
+
+trim() {
+	local s=$1
+	s="${s#"${s%%[![:space:]]*}"}"
+	s="${s%"${s##*[![:space:]]}"}"
+	printf '%s' "$s"
+}
+
+docker_socket_path() {
+	if [[ -S /run/docker.sock ]]; then
+		printf '%s' /run/docker.sock
+		return
+	fi
+	if [[ -S /var/run/docker.sock ]]; then
+		printf '%s' /var/run/docker.sock
+		return
+	fi
+	return 1
+}
+
+require_docker_engine() {
+	getent group docker >/dev/null || die "docker group is missing; install Docker Engine"
+	local socket owner_group mode group_bits
+	socket=$(docker_socket_path) || die "Docker socket not found at /run/docker.sock"
+	owner_group=$(stat -c '%G' "$socket")
+	[[ $owner_group == docker ]] || die "Docker socket $socket is group $owner_group, not docker"
+	mode=$(stat -c '%a' "$socket")
+	group_bits=$((8#$mode / 8 % 8))
+	if (( (group_bits & 2) == 0 )); then
+		die "Docker socket $socket is not group-writable (mode $mode)"
+	fi
+}
+
+write_docker_dropin() {
+	install -d -m 0755 "$eye_dropin_dir"
+	cat >"$eye_dropin" <<'EOF'
+[Unit]
+After=docker.socket
+Wants=docker.socket
+
+[Service]
+SupplementaryGroups=docker
+ReadWritePaths=/run/docker.sock /var/run/docker.sock
+EOF
 }
 
 release_base=https://github.com/Kirragami/panoptes/releases/latest/download
@@ -173,20 +220,13 @@ ensure_user() {
 	useradd --system --user-group --home-dir "$home" --shell "$(nologin_shell)" "$name"
 }
 
-systemd_escape() {
-	local value=$1
-	value=${value//%/%%}
-	value=${value//\$/\$\$}
-	printf '%s' "$value"
-}
-
 write_env_line() {
 	local name=$1
 	local value=$2
 	if [[ $value == *$'\n'* ]]; then
 		die "$name cannot contain a newline"
 	fi
-	printf '%s=%s\n' "$name" "$(systemd_escape "$value")"
+	printf '%s=%s\n' "$name" "$value"
 }
 
 write_unit() {
@@ -218,11 +258,12 @@ EOF
 }
 
 endpoint=
+seal=
 seal_file=
 epithet=
 binary=
 from_source=0
-docker=0
+docker=1
 
 while [[ $# -gt 0 ]]; do
 	case $1 in
@@ -236,6 +277,14 @@ while [[ $# -gt 0 ]]; do
 		;;
 	--endpoint=*)
 		endpoint=${1#*=}
+		shift
+		;;
+	--seal)
+		seal=$(take_flag "$1" "${2-}")
+		shift 2
+		;;
+	--seal=*)
+		seal=${1#*=}
 		shift
 		;;
 	--seal-file)
@@ -270,6 +319,10 @@ while [[ $# -gt 0 ]]; do
 		docker=1
 		shift
 		;;
+	--no-docker)
+		docker=0
+		shift
+		;;
 	*)
 		die "unknown option: $1"
 		;;
@@ -280,7 +333,7 @@ require_root
 require_cmd install
 require_cmd useradd
 
-endpoint=$(prompt_if_empty endpoint "Panopticon endpoint (host:port): " "$endpoint")
+endpoint=$(trim "$(prompt_if_empty endpoint "Panopticon endpoint (host:port): " "$endpoint")")
 [[ $endpoint == *:* ]] || die "endpoint must be host:port"
 
 workdir=$(mktemp -d)
@@ -312,23 +365,26 @@ if [[ -n $epithet ]]; then
 fi
 
 if [[ ! -f $eye_state/brand ]]; then
-	seal_file=$(prompt_if_empty seal-file "Seal file: " "$seal_file")
-	[[ -f $seal_file ]] || die "Seal file not found: $seal_file"
-	install -m 0600 -o "$eye_user" -g "$eye_user" "$seal_file" "$eye_state/seal"
+	if [[ -z $seal && -n $seal_file ]]; then
+		[[ -f $seal_file ]] || die "Seal file not found: $seal_file"
+		seal=$(trim "$(cat "$seal_file")")
+	fi
+	seal=$(trim "$(prompt_if_empty seal "Seal: " "$seal")")
+	[[ -n $seal ]] || die "Seal is required"
+	if [[ $seal == *$'\n'* ]]; then
+		die "Seal cannot contain a newline"
+	fi
+	printf '%s\n' "$seal" >"$eye_state/seal"
+	chmod 0600 "$eye_state/seal"
+	chown "$eye_user:$eye_user" "$eye_state/seal"
 fi
 
 write_unit
 
-if [[ $docker -eq 1 ]] && getent group docker >/dev/null; then
-	install -d -m 0755 "$eye_dropin_dir"
-	cat >"$eye_dropin" <<'EOF'
-[Service]
-SupplementaryGroups=docker
-EOF
+if [[ $docker -eq 1 ]]; then
+	require_docker_engine
+	write_docker_dropin
 else
-	if [[ $docker -eq 1 ]]; then
-		printf '%s\n' "docker group is absent; skipping socket grant" >&2
-	fi
 	rm -f "$eye_dropin"
 	rmdir "$eye_dropin_dir" 2>/dev/null || true
 fi
