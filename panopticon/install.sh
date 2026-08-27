@@ -195,6 +195,53 @@ readable_by_user() {
 	su -s /bin/sh "$name" -c "test -r $(printf '%q' "$path")"
 }
 
+trim() {
+	local s=$1
+	s="${s#"${s%%[![:space:]]*}"}"
+	s="${s%"${s##*[![:space:]]}"}"
+	printf '%s' "$s"
+}
+
+grant_ancestors_exec() {
+	local user=$1
+	local path=$2
+	local dir
+	dir=$(dirname -- "$path")
+	while [[ $dir != / ]]; do
+		if [[ -d $dir ]]; then
+			setfacl -m "u:${user}:--x" "$dir"
+		fi
+		dir=$(dirname -- "$dir")
+	done
+}
+
+grant_read_to_user() {
+	local user=$1
+	local path=$2
+	local resolved
+	resolved=$(readlink -f -- "$path")
+	[[ -n $resolved && -e $resolved ]] || return 1
+	grant_ancestors_exec "$user" "$path"
+	grant_ancestors_exec "$user" "$resolved"
+	setfacl -m "u:${user}:r--" "$resolved"
+	setfacl -d -m "u:${user}:r--" "$(dirname -- "$resolved")"
+}
+
+ensure_readable_by_user() {
+	local user=$1
+	local path=$2
+	if readable_by_user "$user" "$path"; then
+		return
+	fi
+	if ! command -v setfacl >/dev/null; then
+		die "$path is not readable by $user; install the acl package (setfacl) or grant that user execute on Let's Encrypt live/archive directories and read on the files"
+	fi
+	grant_read_to_user "$user" "$path" || die "$path is not readable by $user; could not set ACLs"
+	if ! readable_by_user "$user" "$path"; then
+		die "$path is not readable by $user after ACL grant"
+	fi
+}
+
 reject_home_path() {
 	local path=$1
 	case $path in
@@ -381,12 +428,13 @@ require_root
 require_cmd install
 require_cmd useradd
 
-tls_cert=$(prompt_if_empty tls-cert "TLS certificate path: " "$tls_cert")
-tls_key=$(prompt_if_empty tls-key "TLS key path: " "$tls_key")
+tls_cert=$(trim "$(prompt_if_empty tls-cert "TLS certificate path: " "$tls_cert")")
+tls_key=$(trim "$(prompt_if_empty tls-key "TLS key path: " "$tls_key")")
 [[ -n $panel_addr ]] || panel_addr=:8443
 if [[ -z $firebase ]]; then
 	firebase=$(load_env_value "$panopticon_env" PANOPTICON_FIREBASE_CREDENTIALS)
 fi
+firebase=$(trim "$firebase")
 reject_home_path "$tls_cert"
 reject_home_path "$tls_key"
 [[ -f $tls_cert ]] || die "TLS certificate not found: $tls_cert"
@@ -430,10 +478,10 @@ install -d -m 0755 /etc/panoptes
 install_binary "$built" "$panopticon_binary"
 ln -sfn "$panopticon_binary" "$panopticon_link"
 
-readable_by_user "$panopticon_user" "$tls_cert" || die "$tls_cert is not readable by $panopticon_user"
-readable_by_user "$panopticon_user" "$tls_key" || die "$tls_key is not readable by $panopticon_user; grant read access without copying Let's Encrypt files"
+ensure_readable_by_user "$panopticon_user" "$tls_cert"
+ensure_readable_by_user "$panopticon_user" "$tls_key"
 if [[ -n $firebase ]]; then
-	readable_by_user "$panopticon_user" "$firebase" || die "$firebase is not readable by $panopticon_user"
+	ensure_readable_by_user "$panopticon_user" "$firebase"
 fi
 
 {
